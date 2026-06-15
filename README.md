@@ -36,25 +36,36 @@ npm run preview  # serve the production build locally
 
 ## How to play
 
+- **Prepare:** from the title, choose **Begin** → pick a **hero** and a **stage**.
 - **Move:** `WASD` or arrow keys
 - **Attack:** automatic — weapons fire on their own
 - **Level up:** collect XP gems dropped by enemies; on level-up, pick **1 of 3** upgrades
   with the mouse or keys `1` / `2` / `3`
-- **Goal:** survive as long as you can. A **boss** arrives at the 3-minute mark.
+- **Evolve:** max a weapon, own its paired passive, then open a **treasure chest**
+  (dropped by elites/bosses) to fuse it into a powered-up form.
+- **Pause:** `Esc` / `P` (resume, settings, or quit)
+- **Goal:** survive to the stage's dawn. Bosses arrive on a schedule.
 
 ## Gameplay features
 
-- Player movement with walk/idle animation, facing flip, and post-hit i-frames
-- Four enemy types (bat, zombie, slime, skeleton) plus a boss, all with idle animations
-- Four weapons that scale with levels:
-  - **Arcane Bolt** — homing projectile at the nearest foe
-  - **Holy Spark** — spread of fast sparks
-  - **Frost Aura** — damage field around you
-  - **Orbit Blades** — rotating blades that slice nearby enemies
-- Passive upgrades (damage, cooldown, move speed, pickup radius, max HP, extra projectiles)
-- XP gems with a pickup-magnet radius, gold drops, time-based wave scaling
-- HUD (HP, XP, level, timer, gold, kills), boss health bar, game-over summary
-- Persistent meta (lifetime gold, best time) saved to `localStorage`
+- **5 playable characters** (Knight, Mage, Ranger, Vampire, Warden), each with a unique
+  starting weapon and stat profile. Most are unlocked via achievements.
+- **3 selectable stages** (Moonlit Meadow, Forgotten Crypt, Ashen Wastes) with their own
+  palettes, enemy mixes, boss timelines, and a survive-to-dawn victory.
+- **12 weapons + 5 evolutions** across projectile, aura, and orbit archetypes
+  (Arcane Bolt, Holy Spark, Fireball, Throwing Knives, Shadow Orb, Chain Bolt, Frost Aura,
+  Sacred Flame, Venom Cloud, Orbit Blades, Spirit Tomes, Whirling Saw, …).
+- **15 stacking passives** (damage, crit, area, cooldown, armor, regen, luck, XP, and more).
+- **10 enemy types with real behaviors** — chargers that dash, splitters that burst into
+  spawn, ranged shooters that fire back — plus **3 bosses** with barrage/charge patterns.
+- **Meta shop:** spend earned gold on permanent powerups that apply to every run.
+- **Achievements & unlocks** that gate extra characters and stages.
+- **Procedural audio:** all SFX and music are synthesized at runtime via WebAudio
+  (no audio files), with volume/mute in a settings panel.
+- **Juice:** damage-number popups, enemy knockback, hit flashes, treasure chests, screen
+  shake, and a revive option.
+- HUD (HP, XP, level, timer, gold, kills, loadout), named boss health bar, run summary.
+- Persistent meta (spendable/lifetime gold, best times, unlocks, settings) in `localStorage`.
 
 ## Project structure
 
@@ -62,12 +73,15 @@ npm run preview  # serve the production build locally
 src/
   main.ts            Phaser game config + scene registration
   config/            Tunable constants (GameConfig)
-  scenes/            Boot, Preload, Title, Game, UI, LevelUp, GameOver
-  entities/          Player, Enemy, Projectile, XPGem (pooled)
-  systems/           Spawner, WeaponSystem, XPSystem, UpgradeSystem
+  scenes/            Boot, Preload, Title, CharacterSelect, Shop, Settings,
+                     Game, UI, LevelUp, Pause, GameOver
+  entities/          Player, Enemy, Projectile, EnemyProjectile, XPGem, Chest,
+                     DamageNumber (pooled)
+  systems/           Spawner, WeaponSystem, XPSystem, UpgradeSystem, AudioSystem
   gen/               Procedural art: PixelCanvas, Palette, SpriteFactory, generators/
-  data/              Data-driven content: enemies, weapons, upgrades, waves
-  state/             RunState (per-run), MetaState (localStorage)
+  data/              Data-driven content: enemies, bosses, weapons (+ evolutions),
+                     upgrades, powerups, characters, stages, achievements
+  state/             RunState (per-run), MetaState (localStorage, versioned)
   types/             Shared interfaces
   util/              Math helpers, event names
 ```

@@ -6,6 +6,7 @@ import type { GameScene } from './GameScene';
 interface LevelUpData {
   choices: UpgradeChoice[];
   gameScene: GameScene;
+  title?: string;
 }
 
 /**
@@ -31,7 +32,7 @@ export class LevelUpScene extends Phaser.Scene {
     this.add.rectangle(0, 0, width, height, 0x05050c, 0.78).setOrigin(0);
 
     this.add
-      .text(width / 2, height * 0.16, 'LEVEL UP!', {
+      .text(width / 2, height * 0.16, this.payload.title ?? 'LEVEL UP!', {
         fontFamily: 'Georgia, serif',
         fontSize: '44px',
         color: '#f2c14e',

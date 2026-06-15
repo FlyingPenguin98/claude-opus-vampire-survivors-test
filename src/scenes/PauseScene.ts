@@ -99,26 +99,54 @@ export class PauseScene extends Phaser.Scene {
       }
     }
 
-    const prompt = this.add
-      .text(width / 2, height * 0.92, 'Press Esc / P or click to resume', {
+    // Menu buttons.
+    const mkBtn = (x: number, label: string, color: string, cb: () => void) => {
+      const t = this.add
+        .text(x, height * 0.9, label, {
+          fontFamily: 'Georgia, serif',
+          fontSize: '20px',
+          color,
+          stroke: '#21161f',
+          strokeThickness: 4,
+        })
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true });
+      t.on('pointerover', () => t.setScale(1.1));
+      t.on('pointerout', () => t.setScale(1));
+      t.on('pointerdown', cb);
+      return t;
+    };
+    mkBtn(width * 0.3, '▶ Resume', '#46d873', () => this.resume());
+    mkBtn(width * 0.5, 'Settings', '#6ad8ff', () => this.scene.launch('SettingsScene', { from: 'pause' }));
+    mkBtn(width * 0.7, 'Quit', '#ff7a7a', () => this.quit());
+
+    this.add
+      .text(width / 2, height * 0.96, 'Esc / P to resume', {
         fontFamily: 'Courier New, monospace',
-        fontSize: '18px',
-        color: '#ffffff',
+        fontSize: '13px',
+        color: '#6a7088',
       })
       .setOrigin(0.5);
-    this.tweens.add({ targets: prompt, alpha: 0.3, yoyo: true, repeat: -1, duration: 700 });
 
-    // Bind resume after a short delay so the same key press that opened the pause
-    // screen doesn't immediately close it.
+    // Bind keyboard resume after a short delay so the same key press that opened the
+    // pause screen doesn't immediately close it.
     this.time.delayedCall(180, () => {
       this.input.keyboard?.once('keydown-ESC', () => this.resume());
       this.input.keyboard?.once('keydown-P', () => this.resume());
-      this.input.once('pointerdown', () => this.resume());
     });
   }
 
   private resume(): void {
+    this.scene.stop('SettingsScene');
     this.scene.stop();
     this.gameScene.scene.resume();
+  }
+
+  private quit(): void {
+    this.scene.stop('SettingsScene');
+    this.scene.stop('UIScene');
+    this.scene.stop('GameScene');
+    this.scene.stop();
+    this.scene.start('TitleScene');
   }
 }

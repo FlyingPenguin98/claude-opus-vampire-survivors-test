@@ -6,35 +6,60 @@ import { MetaState } from '../state/MetaState';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 import { Projectile } from '../entities/Projectile';
+import { EnemyProjectile } from '../entities/EnemyProjectile';
 import { XPGem } from '../entities/XPGem';
+import { Chest } from '../entities/Chest';
+import { DamageNumber } from '../entities/DamageNumber';
 import { WeaponSystem } from '../systems/WeaponSystem';
 import { XPSystem } from '../systems/XPSystem';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
 import { Spawner } from '../systems/Spawner';
-import { STARTING_WEAPON } from '../data/weapons';
-import type { LoadoutView, UpgradeChoice } from '../types';
+import { AudioSystem } from '../systems/AudioSystem';
+import { WEAPONS } from '../data/weapons';
+import { POWERUPS } from '../data/powerups';
+import { CHARACTERS, DEFAULT_CHARACTER } from '../data/characters';
+import { STAGES, DEFAULT_STAGE } from '../data/stages';
+import type {
+  LoadoutView,
+  UpgradeChoice,
+  CharacterDef,
+  StageDef,
+  EnemyDef,
+  RunConfig,
+  RunSummary,
+} from '../types';
+import type { MetaData } from '../state/MetaState';
+
+type Reward = 'levelup' | 'chest';
 
 /**
  * The core simulation: owns the world, the player, all entity pools, and every
- * gameplay system. Drives them from update(), and routes all enemy damage through
- * a single `damageEnemy` path so projectile, aura, and orbit weapons behave alike.
+ * gameplay system. Parameterized by a RunConfig (character + stage + meta). Routes
+ * all enemy damage through a single `damageEnemy` path so weapons behave alike.
  */
 export class GameScene extends Phaser.Scene {
   private run!: RunState;
   private player!: Player;
   private playerPos = new Phaser.Math.Vector2();
 
+  private character!: CharacterDef;
+  private stage!: StageDef;
+  private meta!: MetaData;
+
   private enemies!: Phaser.Physics.Arcade.Group;
   private projectiles!: Phaser.Physics.Arcade.Group;
+  private enemyShots!: Phaser.Physics.Arcade.Group;
   private gems!: Phaser.Physics.Arcade.Group;
+  private chests!: Phaser.Physics.Arcade.Group;
+  private damageNumbers: DamageNumber[] = [];
 
   private weapons!: WeaponSystem;
   private xp!: XPSystem;
   private upgrades!: UpgradeSystem;
   private spawner!: Spawner;
 
-  private pendingLevelUps = 0;
-  private leveling = false;
+  private rewardQueue: Reward[] = [];
+  private processingReward = false;
   private gameOver = false;
   private timerEmitAccum = 0;
 
@@ -45,24 +70,44 @@ export class GameScene extends Phaser.Scene {
     super('GameScene');
   }
 
+  init(data: Partial<RunConfig>): void {
+    this.meta = data.meta ?? MetaState.get();
+    this.character = data.character ?? CHARACTERS[DEFAULT_CHARACTER];
+    this.stage = data.stage ?? STAGES[DEFAULT_STAGE];
+  }
+
   create(): void {
     this.gameOver = false;
-    this.leveling = false;
-    this.pendingLevelUps = 0;
+    this.processingReward = false;
+    this.rewardQueue = [];
+    this.damageNumbers = [];
+    this.boss = undefined;
+    this.timerEmitAccum = 0;
+
+    AudioSystem.configure(this.meta.settings);
+    AudioSystem.unlock();
+
     this.run = new RunState();
+    this.applyMeta();
+    this.applyCharacter();
 
     // World + background.
     this.physics.world.setBounds(0, 0, GAME.worldWidth, GAME.worldHeight);
     this.add
-      .tileSprite(0, 0, GAME.worldWidth, GAME.worldHeight, 'grass')
+      .tileSprite(0, 0, GAME.worldWidth, GAME.worldHeight, this.stage.tileKey)
       .setOrigin(0)
       .setTileScale(GAME.spriteScale)
       .setDepth(-10);
+    // Stage ambience tint.
+    this.add
+      .rectangle(0, 0, GAME.worldWidth, GAME.worldHeight, this.stage.tint, this.stage.tintAlpha)
+      .setOrigin(0)
+      .setDepth(-9);
 
     // Player at the center of the world.
     const cx = GAME.worldWidth / 2;
     const cy = GAME.worldHeight / 2;
-    this.player = new Player(this, cx, cy, this.run);
+    this.player = new Player(this, cx, cy, this.run, this.character.spriteKey);
     this.playerPos.set(cx, cy);
 
     this.cameras.main.setBounds(0, 0, GAME.worldWidth, GAME.worldHeight);
@@ -70,15 +115,16 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(GAME.backgroundColor);
 
     // Entity pools.
-    this.enemies = this.physics.add.group({
-      classType: Enemy,
-      maxSize: SPAWN.maxAlive,
-    });
-    this.projectiles = this.physics.add.group({
-      classType: Projectile,
-      maxSize: 500,
-    });
+    this.enemies = this.physics.add.group({ classType: Enemy, maxSize: SPAWN.maxAlive });
+    this.projectiles = this.physics.add.group({ classType: Projectile, maxSize: 600 });
+    this.enemyShots = this.physics.add.group({ classType: EnemyProjectile, maxSize: 300 });
     this.gems = this.physics.add.group({ classType: XPGem, maxSize: 800 });
+    this.chests = this.physics.add.group({ classType: Chest, maxSize: 24 });
+    for (let i = 0; i < 80; i++) {
+      const dn = new DamageNumber(this, 0, 0);
+      this.add.existing(dn);
+      this.damageNumbers.push(dn);
+    }
 
     // Systems.
     this.xp = new XPSystem(this.run);
@@ -88,29 +134,53 @@ export class GameScene extends Phaser.Scene {
       player: this.player,
       enemies: this.enemies,
       getProjectile: () => this.projectiles.get() as Projectile | null,
-      damageEnemy: (e, amt) => this.damageEnemy(e, amt),
+      damageEnemy: (e, amt, fx, fy) => this.damageEnemy(e, amt, fx, fy),
     });
-    this.weapons.addWeapon(STARTING_WEAPON);
+    this.weapons.addWeapon(this.character.startingWeapon);
     this.upgrades = new UpgradeSystem(this.run, this.weapons);
-    this.spawner = new Spawner(this, this.enemies, this.playerPos, (b) =>
-      this.onBossSpawned(b)
+    this.spawner = new Spawner(
+      this,
+      this.enemies,
+      this.playerPos,
+      this.stage,
+      (x, y, tx, ty, def) => this.fireEnemyShot(x, y, tx, ty, def),
+      (b) => this.onBossSpawned(b)
     );
 
     this.setupCollisions();
 
-    // Pause toggle (Esc / P). Works while the GameScene is active; the PauseScene
-    // handles resuming since this scene's input is frozen while paused.
     this.input.keyboard?.on('keydown-ESC', this.togglePause, this);
     this.input.keyboard?.on('keydown-P', this.togglePause, this);
 
-    // UI overlay.
     this.scene.launch('UIScene');
-    // Push initial state to the UI once it is ready.
     this.time.delayedCall(0, () => this.emitFullState());
   }
 
+  /** Apply permanent meta powerups to the fresh RunState. */
+  private applyMeta(): void {
+    for (const id of Object.keys(this.meta.powerups)) {
+      const lvl = this.meta.powerups[id];
+      if (lvl > 0) POWERUPS[id]?.apply(this.run, lvl);
+    }
+  }
+
+  /** Apply the selected character's stat modifiers, then reset HP to full. */
+  private applyCharacter(): void {
+    const m = this.character.mods;
+    if (m.maxHpAdd) this.run.maxHp += m.maxHpAdd;
+    if (m.moveSpeedMult) this.run.moveSpeedMult *= m.moveSpeedMult;
+    if (m.damageMult) this.run.damageMult *= m.damageMult;
+    if (m.cooldownMult) this.run.cooldownMult *= m.cooldownMult;
+    if (m.pickupRadiusMult) this.run.pickupRadiusMult *= m.pickupRadiusMult;
+    if (m.armor) this.run.armor += m.armor;
+    if (m.critChance) this.run.critChance += m.critChance;
+    if (m.projectileBonus) this.run.projectileBonus += m.projectileBonus;
+    this.run.maxHp = Math.max(20, this.run.maxHp);
+    this.run.hp = this.run.maxHp;
+  }
+
   private togglePause(): void {
-    if (this.gameOver || this.leveling || this.scene.isPaused()) return;
+    if (this.gameOver || this.processingReward || this.scene.isPaused()) return;
     this.scene.pause();
     this.scene.launch('PauseScene', { gameScene: this });
   }
@@ -130,27 +200,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   private setupCollisions(): void {
-    this.physics.add.overlap(
-      this.projectiles,
-      this.enemies,
-      (p, e) => this.onProjectileHit(p as Projectile, e as Enemy),
-      undefined,
-      this
+    this.physics.add.overlap(this.projectiles, this.enemies, (p, e) =>
+      this.onProjectileHit(p as Projectile, e as Enemy)
     );
-    this.physics.add.overlap(
-      this.player,
-      this.enemies,
-      (_pl, e) => this.onPlayerContact(e as Enemy),
-      undefined,
-      this
+    this.physics.add.overlap(this.player, this.enemies, (_pl, e) =>
+      this.onPlayerContact(e as Enemy)
     );
-    this.physics.add.overlap(
-      this.player,
-      this.gems,
-      (_pl, g) => this.onCollectGem(g as XPGem),
-      undefined,
-      this
+    this.physics.add.overlap(this.player, this.enemyShots, (_pl, s) =>
+      this.onEnemyShotHit(s as EnemyProjectile)
     );
+    this.physics.add.overlap(this.player, this.gems, (_pl, g) => this.onCollectGem(g as XPGem));
+    this.physics.add.overlap(this.player, this.chests, (_pl, c) => this.onCollectChest(c as Chest));
   }
 
   // --- Combat ---
@@ -158,39 +218,60 @@ export class GameScene extends Phaser.Scene {
   private onProjectileHit(proj: Projectile, enemy: Enemy): void {
     if (!proj.active || !enemy.active) return;
     if (proj.alreadyHit(enemy)) return;
-    this.damageEnemy(enemy, proj.damage);
+    this.damageEnemy(enemy, proj.damage, proj.x, proj.y);
     if (proj.onHit(enemy)) proj.kill();
   }
 
   /** Single source of truth for hurting an enemy (used by all weapon types). */
-  private damageEnemy(enemy: Enemy, amount: number): void {
+  private damageEnemy(enemy: Enemy, amount: number, fromX?: number, fromY?: number): void {
     if (!enemy.active) return;
-    const dead = enemy.damage(amount);
+    let dmg = amount;
+    let crit = false;
+    if (this.run.critChance > 0 && Math.random() < this.run.critChance) {
+      dmg *= this.run.critMult;
+      crit = true;
+    }
+    dmg = Math.max(1, Math.round(dmg));
+    const dead = enemy.damage(dmg, fromX, fromY);
+    if (this.meta.settings.showDamage) this.popDamage(enemy.x, enemy.y, dmg, crit);
+    AudioSystem.hit();
     if (dead) this.killEnemy(enemy);
   }
 
+  private popDamage(x: number, y: number, amount: number, crit: boolean): void {
+    const dn = this.damageNumbers.find((d) => !d.active);
+    if (!dn) return;
+    dn.spawn(x, y, amount, crit);
+  }
+
   private killEnemy(enemy: Enemy): void {
+    const { x, y } = enemy;
+    const def = enemy.def;
     this.run.kills += 1;
     this.events.emit(EVENTS.KILLS_CHANGED, this.run.kills);
+    AudioSystem.kill();
 
-    this.spawnGem(enemy.x, enemy.y, enemy.def.xpValue, false);
-    if (Math.random() < enemy.def.goldChance) {
-      this.spawnGem(enemy.x, enemy.y, 0, true);
+    this.spawnGem(x, y, def.xpValue, false);
+    if (Math.random() < def.goldChance * this.run.luck) this.spawnGem(x, y, 0, true);
+    if (def.chestChance && Math.random() < def.chestChance * this.run.luck) this.spawnChest(x, y);
+
+    // Splitter offspring.
+    if (def.splitInto) {
+      for (let i = 0; i < (def.splitCount ?? 2); i++) {
+        const a = Phaser.Math.FloatBetween(0, Math.PI * 2);
+        this.spawner.spawnAt(def.splitInto, x + Math.cos(a) * 14, y + Math.sin(a) * 14, 1, 1);
+      }
     }
 
     if (enemy.isBoss) {
+      this.run.bossKills += 1;
       this.boss = undefined;
       this.events.emit(EVENTS.BOSS_DIED);
       this.cameras.main.flash(300, 255, 220, 120);
-      // Big reward shower.
+      this.spawnChest(x, y);
       for (let i = 0; i < 12; i++) {
         const a = (i / 12) * Math.PI * 2;
-        this.spawnGem(
-          enemy.x + Math.cos(a) * 40,
-          enemy.y + Math.sin(a) * 40,
-          5,
-          false
-        );
+        this.spawnGem(x + Math.cos(a) * 40, y + Math.sin(a) * 40, 5, false);
       }
     }
 
@@ -203,14 +284,58 @@ export class GameScene extends Phaser.Scene {
     gem.spawn(x, y, value, isGold);
   }
 
+  private spawnChest(x: number, y: number): void {
+    const chest = this.chests.get() as Chest | null;
+    if (!chest) return;
+    chest.spawn(x, y);
+  }
+
+  private fireEnemyShot(x: number, y: number, tx: number, ty: number, def: EnemyDef): void {
+    const speed = def.shotSpeed ?? 200;
+    const dmg = def.shotDamage ?? 8;
+    const base = Phaser.Math.Angle.Between(x, y, tx, ty);
+    const angles = def.boss ? [base - 0.25, base, base + 0.25] : [base];
+    for (const a of angles) {
+      const shot = this.enemyShots.get() as EnemyProjectile | null;
+      if (!shot) break;
+      shot.fire(x, y, a, speed, dmg);
+    }
+  }
+
   private onPlayerContact(enemy: Enemy): void {
     if (this.gameOver || !enemy.active) return;
     if (this.player.isInvulnerable) return;
     if (!this.player.takeHit()) return;
-    this.run.hp -= enemy.contactDamage;
+    this.applyPlayerDamage(enemy.contactDamage);
+  }
+
+  private onEnemyShotHit(shot: EnemyProjectile): void {
+    if (this.gameOver || !shot.active) return;
+    shot.kill();
+    if (this.player.isInvulnerable) return;
+    if (!this.player.takeHit()) return;
+    this.applyPlayerDamage(shot.damage);
+  }
+
+  private applyPlayerDamage(raw: number): void {
+    const dmg = Math.max(1, raw - this.run.armor);
+    this.run.hp -= dmg;
     this.cameras.main.shake(120, 0.006);
+    AudioSystem.hurt();
     this.events.emit(EVENTS.HP_CHANGED, Math.max(0, this.run.hp), this.run.maxHp);
-    if (this.run.hp <= 0) this.handleDeath();
+    if (this.run.hp <= 0) this.handleFatal();
+  }
+
+  private handleFatal(): void {
+    if (this.run.revives > 0) {
+      this.run.revives -= 1;
+      this.run.hp = Math.ceil(this.run.maxHp * 0.5);
+      this.cameras.main.flash(400, 120, 220, 255);
+      this.player.takeHit();
+      this.events.emit(EVENTS.HP_CHANGED, this.run.hp, this.run.maxHp);
+      return;
+    }
+    this.handleEnd(false);
   }
 
   private onCollectGem(gem: XPGem): void {
@@ -219,85 +344,119 @@ export class GameScene extends Phaser.Scene {
       this.run.gold += 1;
       this.events.emit(EVENTS.GOLD_CHANGED, this.run.gold);
     } else {
-      const gained = this.xp.addXP(gem.value);
+      const gained = this.xp.addXP(Math.max(1, Math.round(gem.value * this.run.xpMult)));
       this.events.emit(EVENTS.XP_CHANGED, this.xp.progress, this.run.level);
-      if (gained > 0) {
-        this.pendingLevelUps += gained;
-        this.maybeLevelUp();
-      }
+      AudioSystem.pickup();
+      for (let i = 0; i < gained; i++) this.rewardQueue.push('levelup');
+      if (gained > 0) this.openReward();
     }
     gem.kill();
   }
 
-  // --- Level up flow ---
-
-  private maybeLevelUp(): void {
-    if (this.leveling || this.pendingLevelUps <= 0) return;
-    this.openLevelUp();
+  private onCollectChest(chest: Chest): void {
+    if (!chest.active) return;
+    chest.kill();
+    AudioSystem.chest();
+    this.rewardQueue.push('chest');
+    this.openReward();
   }
 
-  private openLevelUp(): void {
-    this.leveling = true;
-    this.pendingLevelUps -= 1;
-    const choices = this.upgrades.buildChoices(3);
+  // --- Reward flow (level-ups + chests, serialized through one queue) ---
+
+  private openReward(): void {
+    if (this.processingReward) return;
+    if (this.gameOver) return;
+    const item = this.rewardQueue.shift();
+    if (!item) {
+      if (this.scene.isPaused()) this.scene.resume();
+      return;
+    }
+    this.processingReward = true;
     if (!this.scene.isPaused()) this.scene.pause();
-    this.scene.launch('LevelUpScene', { choices, gameScene: this });
+
+    let choices: UpgradeChoice[];
+    let title = 'LEVEL UP!';
+    if (item === 'chest') {
+      const evos = this.weapons.getAvailableEvolutions();
+      if (evos.length > 0) {
+        const recipe = evos[0];
+        const def = WEAPONS[recipe.resultId];
+        choices = [
+          {
+            id: `evo-${recipe.resultId}`,
+            name: def.name,
+            description: def.description,
+            icon: def.textureKey,
+            kind: 'evolution',
+            badge: 'Evolve!',
+            apply: (_r, w) => w.evolve(recipe),
+          },
+        ];
+        title = 'EVOLUTION!';
+        AudioSystem.evolve();
+      } else {
+        choices = this.upgrades.buildChoices(3);
+        title = 'TREASURE!';
+      }
+    } else {
+      choices = this.upgrades.buildChoices(3);
+    }
+    this.scene.launch('LevelUpScene', { choices, gameScene: this, title });
   }
 
   /** Called by LevelUpScene once the player picks a card. */
   onUpgradePicked(choice: UpgradeChoice): void {
     this.upgrades.apply(choice);
-    this.leveling = false;
+    this.processingReward = false;
 
-    // Track passives so the loadout UI can display them.
     if (choice.kind === 'passive' || choice.kind === 'heal') {
       const existing = this.run.passives.get(choice.id);
       if (existing) existing.count += 1;
-      else
-        this.run.passives.set(choice.id, {
-          name: choice.name,
-          icon: choice.icon,
-          count: 1,
-        });
+      else this.run.passives.set(choice.id, { name: choice.name, icon: choice.icon, count: 1 });
     }
 
-    // Passives may have changed HP / max HP / pickup radius.
     this.events.emit(EVENTS.HP_CHANGED, Math.max(0, this.run.hp), this.run.maxHp);
     this.events.emit(EVENTS.XP_CHANGED, this.xp.progress, this.run.level);
     this.events.emit(EVENTS.LOADOUT_CHANGED, this.getLoadout());
-    if (this.pendingLevelUps > 0) this.openLevelUp();
-    else this.scene.resume();
+    this.openReward();
   }
 
   // --- Boss ---
 
   private onBossSpawned(boss: Enemy): void {
     this.boss = boss;
-    this.events.emit(EVENTS.BOSS_SPAWNED);
+    this.events.emit(EVENTS.BOSS_SPAWNED, boss.def.name ?? 'BOSS');
     this.cameras.main.shake(400, 0.01);
+    AudioSystem.bossSpawn();
   }
 
-  // --- Death ---
+  // --- End of run ---
 
-  private handleDeath(): void {
+  private handleEnd(victory: boolean): void {
     if (this.gameOver) return;
     this.gameOver = true;
     this.player.setVelocity(0, 0);
     this.physics.pause();
     this.cameras.main.shake(350, 0.012);
     this.events.emit(EVENTS.PLAYER_DIED);
+    if (victory) AudioSystem.levelUp();
+    else AudioSystem.death();
 
-    const meta = MetaState.recordRun(this.run.gold, this.run.elapsed);
-    const summary = {
+    const summary: RunSummary = {
       timeSec: this.run.elapsed,
       kills: this.run.kills,
       gold: this.run.gold,
       level: this.run.level,
-      meta,
+      stageId: this.stage.id,
+      characterId: this.character.id,
+      bossKills: this.run.bossKills,
+      victory,
     };
+    const { meta, newlyUnlocked } = MetaState.processRun(summary);
+
     this.time.delayedCall(900, () => {
       this.scene.stop('UIScene');
-      this.scene.start('GameOverScene', summary);
+      this.scene.start('GameOverScene', { summary, meta, newlyUnlocked });
     });
   }
 
@@ -312,14 +471,19 @@ export class GameScene extends Phaser.Scene {
     this.events.emit(EVENTS.LOADOUT_CHANGED, this.getLoadout());
   }
 
-  update(_time: number, delta: number): void {
+  update(time: number, delta: number): void {
     if (this.gameOver) return;
 
     this.playerPos.set(this.player.x, this.player.y);
     this.run.elapsed += delta / 1000;
 
     this.spawner.update(delta, this.run.elapsed);
-    this.weapons.update(_time, delta);
+    this.weapons.update(time, delta);
+
+    // Regen.
+    if (this.run.regenPerSec > 0 && this.run.hp < this.run.maxHp) {
+      this.run.hp = Math.min(this.run.maxHp, this.run.hp + this.run.regenPerSec * (delta / 1000));
+    }
 
     // Gem magnet pull.
     const radius = this.run.pickupRadius;
@@ -328,11 +492,15 @@ export class GameScene extends Phaser.Scene {
       if (g.active) g.updateMagnet(this.player.x, this.player.y, radius);
     }
 
-    // Throttled timer emit (~4/sec).
+    // Throttled HUD emits (~4/sec).
     this.timerEmitAccum += delta;
     if (this.timerEmitAccum >= 250) {
       this.timerEmitAccum = 0;
       this.events.emit(EVENTS.TIMER, this.run.elapsed);
+      this.events.emit(EVENTS.HP_CHANGED, Math.max(0, this.run.hp), this.run.maxHp);
     }
+
+    // Victory: survive to the stage duration.
+    if (this.run.elapsed >= this.stage.durationSec) this.handleEnd(true);
   }
 }

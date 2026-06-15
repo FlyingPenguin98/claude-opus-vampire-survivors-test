@@ -16,12 +16,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
   private invulnUntil = 0;
   private run: RunState;
+  /** Animation key prefix for this character's sprite. */
+  private spriteKey: string;
   /** A soft shadow drawn under the player for grounding. */
   private shadow: Phaser.GameObjects.Image;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, run: RunState) {
-    super(scene, x, y, 'player');
+  constructor(scene: Phaser.Scene, x: number, y: number, run: RunState, spriteKey = 'player') {
+    super(scene, x, y, spriteKey);
     this.run = run;
+    this.spriteKey = spriteKey;
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
@@ -51,7 +54,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       right: kb.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
 
-    this.play('player-idle');
+    this.play(`${this.spriteKey}-idle`);
   }
 
   get isInvulnerable(): boolean {
@@ -92,10 +95,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.setVelocity(dir.x, dir.y);
       if (left) this.setFlipX(true);
       else if (right) this.setFlipX(false);
-      if (this.anims.currentAnim?.key !== 'player-walk') this.play('player-walk');
+      const walk = `${this.spriteKey}-walk`;
+      if (this.anims.currentAnim?.key !== walk) this.play(walk);
     } else {
       this.setVelocity(0, 0);
-      if (this.anims.currentAnim?.key !== 'player-idle') this.play('player-idle');
+      const idle = `${this.spriteKey}-idle`;
+      if (this.anims.currentAnim?.key !== idle) this.play(idle);
     }
 
     // Keep the shadow anchored beneath the feet.

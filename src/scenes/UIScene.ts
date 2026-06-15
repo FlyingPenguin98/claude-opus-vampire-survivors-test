@@ -22,6 +22,7 @@ export class UIScene extends Phaser.Scene {
 
   private bossContainer!: Phaser.GameObjects.Container;
   private bossBar!: Phaser.GameObjects.Rectangle;
+  private bossLabel!: Phaser.GameObjects.Text;
   private bossBarWidth = 0;
 
   private loadoutContainer!: Phaser.GameObjects.Container;
@@ -102,15 +103,15 @@ export class UIScene extends Phaser.Scene {
       .setOrigin(0)
       .setStrokeStyle(2, 0xff486a);
     this.bossBar = this.add.rectangle(2, 2, this.bossBarWidth - 4, 12, 0xc43358).setOrigin(0);
-    const label = this.add
-      .text(this.bossBarWidth / 2, -14, 'REVENANT LORD', {
+    this.bossLabel = this.add
+      .text(this.bossBarWidth / 2, -14, 'BOSS', {
         fontFamily: 'Georgia, serif',
         fontSize: '14px',
         color: '#ff486a',
       })
       .setOrigin(0.5, 1);
     this.bossContainer = this.add
-      .container(bx, by, [bg, this.bossBar, label])
+      .container(bx, by, [bg, this.bossBar, this.bossLabel])
       .setVisible(false);
 
     // --- Loadout bar (weapon + passive icons), refreshed on change ---
@@ -171,7 +172,10 @@ export class UIScene extends Phaser.Scene {
     ev.on(EVENTS.TIMER, this.onTimer, this);
     ev.on(EVENTS.GOLD_CHANGED, (g: number) => this.goldText.setText(`🪙 ${g}`));
     ev.on(EVENTS.KILLS_CHANGED, (k: number) => this.killsText.setText(`☠ ${k}`));
-    ev.on(EVENTS.BOSS_SPAWNED, () => this.bossContainer.setVisible(true));
+    ev.on(EVENTS.BOSS_SPAWNED, (name: string) => {
+      this.bossLabel.setText((name ?? 'BOSS').toUpperCase());
+      this.bossContainer.setVisible(true);
+    });
     ev.on(EVENTS.BOSS_DIED, () => this.bossContainer.setVisible(false));
     ev.on(EVENTS.LOADOUT_CHANGED, this.rebuildLoadout, this);
 

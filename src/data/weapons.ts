@@ -1,10 +1,17 @@
 import type { WeaponDef } from '../types';
 
 /**
- * Weapon catalogue. Stats listed are level-1 values; the WeaponSystem applies
- * per-level scaling when a weapon is leveled up (see WeaponSystem.applyLevel).
+ * Weapon catalogue. Stats listed are level-1 values; the WeaponSystem applies the
+ * per-level deltas in `levels` (index 0 = level 2) relative to these base values.
+ *
+ * `damageMult`/`cooldownMult`/`radiusMult` are absolute multipliers FROM BASE (the
+ * latest one reached wins); `addCount`/`addPierce` accumulate across levels.
+ *
+ * Weapons with `evolvesInto` + `requiresPassive` fuse into a powered-up form (marked
+ * `evolvedFrom`) when maxed and the required passive is owned — delivered via a chest.
  */
 export const WEAPONS: Record<string, WeaponDef> = {
+  // --- Projectile weapons ---
   bolt: {
     id: 'bolt',
     name: 'Arcane Bolt',
@@ -17,13 +24,14 @@ export const WEAPONS: Record<string, WeaponDef> = {
     projectileSpeed: 360,
     pierce: 0,
     count: 1,
-    levelText: [
-      '',
-      '+1 projectile',
-      '+40% damage',
-      '+1 pierce',
-      '+1 projectile, -15% cooldown',
-      '+60% damage',
+    evolvesInto: 'bolt-evo',
+    requiresPassive: 'passive-might',
+    levels: [
+      { addCount: 1, text: '+1 projectile' },
+      { damageMult: 1.4, text: '+40% damage' },
+      { addPierce: 1, text: '+1 pierce' },
+      { addCount: 1, cooldownMult: 0.85, text: '+1 projectile, -15% cooldown' },
+      { damageMult: 2.0, text: '+60% damage' },
     ],
   },
   spark: {
@@ -38,35 +46,158 @@ export const WEAPONS: Record<string, WeaponDef> = {
     projectileSpeed: 420,
     pierce: 0,
     count: 3,
-    levelText: [
-      '',
-      '+2 projectiles',
-      '+30% damage',
-      '+2 projectiles',
-      '-20% cooldown',
-      '+1 pierce, +40% damage',
+    evolvesInto: 'spark-evo',
+    requiresPassive: 'passive-multishot',
+    levels: [
+      { addCount: 2, text: '+2 projectiles' },
+      { damageMult: 1.3, text: '+30% damage' },
+      { addCount: 2, text: '+2 projectiles' },
+      { cooldownMult: 0.8, text: '-20% cooldown' },
+      { addPierce: 1, damageMult: 1.7, text: '+1 pierce, +40% damage' },
     ],
   },
+  fireball: {
+    id: 'fireball',
+    name: 'Fireball',
+    type: 'projectile',
+    textureKey: 'bolt-red',
+    description: 'A slow, heavy orb that burns through foes.',
+    maxLevel: 6,
+    damage: 22,
+    cooldownMs: 1500,
+    projectileSpeed: 240,
+    pierce: 1,
+    count: 1,
+    evolvesInto: 'fireball-evo',
+    requiresPassive: 'passive-vitality',
+    levels: [
+      { damageMult: 1.3, text: '+30% damage' },
+      { addPierce: 1, text: '+1 pierce' },
+      { cooldownMult: 0.85, text: '-15% cooldown' },
+      { addCount: 1, text: '+1 projectile' },
+      { damageMult: 1.9, addPierce: 1, text: '+90% damage, +1 pierce' },
+    ],
+  },
+  knife: {
+    id: 'knife',
+    name: 'Throwing Knives',
+    type: 'projectile',
+    textureKey: 'knife',
+    description: 'Rapid-fire blades hurled at the nearest foe.',
+    maxLevel: 6,
+    damage: 5,
+    cooldownMs: 450,
+    projectileSpeed: 520,
+    pierce: 0,
+    count: 2,
+    levels: [
+      { addCount: 1, text: '+1 knife' },
+      { cooldownMult: 0.85, text: '-15% cooldown' },
+      { damageMult: 1.4, text: '+40% damage' },
+      { addCount: 1, addPierce: 1, text: '+1 knife, +1 pierce' },
+      { cooldownMult: 0.65, damageMult: 1.7, text: '-35% cooldown, +70% damage' },
+    ],
+  },
+  shadow: {
+    id: 'shadow',
+    name: 'Shadow Orb',
+    type: 'projectile',
+    textureKey: 'bolt-violet',
+    description: 'A dark orb that drifts through the swarm.',
+    maxLevel: 6,
+    damage: 9,
+    cooldownMs: 1000,
+    projectileSpeed: 300,
+    pierce: 2,
+    count: 1,
+    levels: [
+      { addPierce: 2, text: '+2 pierce' },
+      { damageMult: 1.4, text: '+40% damage' },
+      { addCount: 1, text: '+1 orb' },
+      { addPierce: 2, cooldownMult: 0.85, text: '+2 pierce, -15% cooldown' },
+      { damageMult: 2.0, text: '+100% damage' },
+    ],
+  },
+  lightning: {
+    id: 'lightning',
+    name: 'Chain Bolt',
+    type: 'projectile',
+    textureKey: 'bolt-white',
+    description: 'A piercing arc of lightning.',
+    maxLevel: 6,
+    damage: 7,
+    cooldownMs: 700,
+    projectileSpeed: 640,
+    pierce: 3,
+    count: 1,
+    levels: [
+      { addPierce: 2, text: '+2 pierce' },
+      { damageMult: 1.4, text: '+40% damage' },
+      { addCount: 1, addPierce: 1, text: '+1 bolt, +1 pierce' },
+      { cooldownMult: 0.8, text: '-20% cooldown' },
+      { damageMult: 1.9, addPierce: 2, text: '+90% damage, +2 pierce' },
+    ],
+  },
+
+  // --- Aura weapons ---
   aura: {
     id: 'aura',
     name: 'Frost Aura',
     type: 'aura',
-    // Small UI icon; the in-world field uses the large 'aura-field' texture directly.
     textureKey: 'icon-frost',
     description: 'A chilling field damages nearby enemies.',
     maxLevel: 6,
     damage: 4,
     cooldownMs: 500,
     radius: 90,
-    levelText: [
-      '',
-      '+25% radius',
-      '+50% damage',
-      '+20% radius',
-      '-20% tick time',
-      '+70% damage',
+    evolvesInto: 'aura-evo',
+    requiresPassive: 'passive-haste',
+    levels: [
+      { radiusMult: 1.25, text: '+25% radius' },
+      { damageMult: 1.5, text: '+50% damage' },
+      { radiusMult: 1.45, text: '+20% radius' },
+      { cooldownMult: 0.8, text: '-20% tick time' },
+      { damageMult: 2.2, text: '+70% damage' },
     ],
   },
+  halo: {
+    id: 'halo',
+    name: 'Sacred Flame',
+    type: 'aura',
+    textureKey: 'icon-flame',
+    description: 'A searing halo that scorches the close swarm.',
+    maxLevel: 6,
+    damage: 6,
+    cooldownMs: 380,
+    radius: 70,
+    levels: [
+      { damageMult: 1.4, text: '+40% damage' },
+      { radiusMult: 1.3, text: '+30% radius' },
+      { cooldownMult: 0.8, text: '-20% tick time' },
+      { damageMult: 1.8, text: '+80% damage' },
+      { radiusMult: 1.6, damageMult: 2.4, text: '+30% radius, big damage' },
+    ],
+  },
+  venom: {
+    id: 'venom',
+    name: 'Venom Cloud',
+    type: 'aura',
+    textureKey: 'icon-venom',
+    description: 'A wide toxic cloud that erodes the horde.',
+    maxLevel: 6,
+    damage: 3,
+    cooldownMs: 600,
+    radius: 120,
+    levels: [
+      { radiusMult: 1.25, text: '+25% radius' },
+      { damageMult: 1.6, text: '+60% damage' },
+      { cooldownMult: 0.8, text: '-20% tick time' },
+      { radiusMult: 1.5, text: '+25% radius' },
+      { damageMult: 2.4, text: '+80% damage' },
+    ],
+  },
+
+  // --- Orbit weapons ---
   blade: {
     id: 'blade',
     name: 'Orbit Blades',
@@ -75,19 +206,149 @@ export const WEAPONS: Record<string, WeaponDef> = {
     description: 'Blades orbit you, slicing what they touch.',
     maxLevel: 6,
     damage: 10,
-    cooldownMs: 9999, // orbit weapons are persistent, not cooldown-fired
+    cooldownMs: 9999,
     radius: 70,
     count: 2,
-    levelText: [
-      '',
-      '+1 blade',
-      '+40% damage',
-      '+1 blade, +15% radius',
-      '+50% damage',
-      '+2 blades',
+    evolvesInto: 'blade-evo',
+    requiresPassive: 'passive-swift',
+    levels: [
+      { addCount: 1, text: '+1 blade' },
+      { damageMult: 1.4, text: '+40% damage' },
+      { addCount: 1, radiusMult: 1.15, text: '+1 blade, +15% radius' },
+      { damageMult: 1.9, text: '+50% damage' },
+      { addCount: 2, text: '+2 blades' },
     ],
+  },
+  tome: {
+    id: 'tome',
+    name: 'Spirit Tomes',
+    type: 'orbit',
+    textureKey: 'tome',
+    description: 'Sacred tomes circle you at a wide radius.',
+    maxLevel: 6,
+    damage: 8,
+    cooldownMs: 9999,
+    radius: 95,
+    count: 2,
+    levels: [
+      { addCount: 1, text: '+1 tome' },
+      { radiusMult: 1.2, text: '+20% radius' },
+      { damageMult: 1.5, text: '+50% damage' },
+      { addCount: 2, text: '+2 tomes' },
+      { damageMult: 2.0, text: '+100% damage' },
+    ],
+  },
+  sawblade: {
+    id: 'sawblade',
+    name: 'Whirling Saw',
+    type: 'orbit',
+    textureKey: 'sawblade',
+    description: 'A heavy saw grinds in a tight orbit.',
+    maxLevel: 6,
+    damage: 16,
+    cooldownMs: 9999,
+    radius: 55,
+    count: 1,
+    levels: [
+      { damageMult: 1.4, text: '+40% damage' },
+      { addCount: 1, text: '+1 saw' },
+      { radiusMult: 1.3, text: '+30% radius' },
+      { damageMult: 1.9, text: '+50% damage' },
+      { addCount: 1, damageMult: 2.4, text: '+1 saw, big damage' },
+    ],
+  },
+
+  // --- Evolutions (granted via chest; never offered directly) ---
+  'bolt-evo': {
+    id: 'bolt-evo',
+    name: 'Arcane Storm',
+    type: 'projectile',
+    textureKey: 'bolt-cyan',
+    description: 'A relentless storm of homing arcane shards.',
+    maxLevel: 1,
+    damage: 26,
+    cooldownMs: 480,
+    projectileSpeed: 440,
+    pierce: 3,
+    count: 4,
+    evolvedFrom: 'bolt',
+    levels: [],
+  },
+  'spark-evo': {
+    id: 'spark-evo',
+    name: 'Holy Tempest',
+    type: 'projectile',
+    textureKey: 'bolt-gold',
+    description: 'A blinding fan of holy light.',
+    maxLevel: 1,
+    damage: 12,
+    cooldownMs: 700,
+    projectileSpeed: 480,
+    pierce: 2,
+    count: 9,
+    evolvedFrom: 'spark',
+    levels: [],
+  },
+  'fireball-evo': {
+    id: 'fireball-evo',
+    name: 'Inferno',
+    type: 'projectile',
+    textureKey: 'bolt-red',
+    description: 'Twin meteors that incinerate everything.',
+    maxLevel: 1,
+    damage: 60,
+    cooldownMs: 1100,
+    projectileSpeed: 280,
+    pierce: 4,
+    count: 2,
+    evolvedFrom: 'fireball',
+    levels: [],
+  },
+  'aura-evo': {
+    id: 'aura-evo',
+    name: 'Blizzard',
+    type: 'aura',
+    textureKey: 'icon-frost',
+    description: 'A vast, freezing storm engulfs the field.',
+    maxLevel: 1,
+    damage: 16,
+    cooldownMs: 340,
+    radius: 150,
+    evolvedFrom: 'aura',
+    levels: [],
+  },
+  'blade-evo': {
+    id: 'blade-evo',
+    name: 'Death Spiral',
+    type: 'orbit',
+    textureKey: 'blade',
+    description: 'A whirling wall of six razor blades.',
+    maxLevel: 1,
+    damage: 30,
+    cooldownMs: 9999,
+    radius: 95,
+    count: 6,
+    evolvedFrom: 'blade',
+    levels: [],
   },
 };
 
-/** Weapon the player always starts with. */
+/** Weapon the player always starts with (overridden by character choice). */
 export const STARTING_WEAPON = 'bolt';
+
+/** Base weapons that can be offered as new picks (excludes evolutions). */
+export const OFFERABLE_WEAPONS = Object.values(WEAPONS).filter((w) => !w.evolvedFrom);
+
+/** Evolution recipes derived from weapon defs. */
+export interface EvolutionRecipe {
+  baseId: string;
+  requiresPassive: string;
+  resultId: string;
+}
+export const EVOLUTIONS: EvolutionRecipe[] = Object.values(WEAPONS)
+  .filter((w) => w.evolvesInto && w.requiresPassive)
+  .map((w) => ({
+    baseId: w.id,
+    requiresPassive: w.requiresPassive!,
+    resultId: w.evolvesInto!,
+  }));

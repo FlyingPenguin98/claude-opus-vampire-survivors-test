@@ -1,12 +1,12 @@
 import type { RunState } from '../state/RunState';
 import type { UpgradeChoice } from '../types';
-import { WEAPONS } from '../data/weapons';
+import { OFFERABLE_WEAPONS } from '../data/weapons';
 import { PASSIVE_UPGRADES, HEAL_CHOICE } from '../data/upgrades';
 import { weightedSample } from '../util/math';
 import type { WeaponSystem } from './WeaponSystem';
 
 /** Maximum distinct weapons a player can carry before only level-ups are offered. */
-const MAX_WEAPONS = 5;
+const MAX_WEAPONS = 6;
 
 /**
  * Builds the level-up choice list. Combines: new-weapon offers, level-up offers for
@@ -33,7 +33,7 @@ export class UpgradeSystem {
       pool.push({
         id: `weaponLevel-${id}`,
         name: inst.def.name,
-        description: inst.def.levelText[nextLevel - 1] ?? 'Improve this weapon.',
+        description: inst.def.levels[nextLevel - 2]?.text ?? 'Improve this weapon.',
         icon: inst.def.textureKey,
         kind: 'weaponLevel',
         badge: `Lv ${nextLevel}`,
@@ -43,7 +43,7 @@ export class UpgradeSystem {
 
     // New-weapon offers (if loadout has room).
     if (this.weapons.weaponCount < MAX_WEAPONS) {
-      for (const def of Object.values(WEAPONS)) {
+      for (const def of OFFERABLE_WEAPONS) {
         if (this.weapons.hasWeapon(def.id)) continue;
         pool.push({
           id: `newWeapon-${def.id}`,
