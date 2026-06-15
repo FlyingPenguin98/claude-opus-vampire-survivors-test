@@ -12,7 +12,7 @@ import { XPSystem } from '../systems/XPSystem';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
 import { Spawner } from '../systems/Spawner';
 import { STARTING_WEAPON } from '../data/weapons';
-import type { UpgradeChoice } from '../types';
+import type { LoadoutView, UpgradeChoice } from '../types';
 
 /**
  * The core simulation: owns the world, the player, all entity pools, and every
@@ -98,10 +98,35 @@ export class GameScene extends Phaser.Scene {
 
     this.setupCollisions();
 
+    // Pause toggle (Esc / P). Works while the GameScene is active; the PauseScene
+    // handles resuming since this scene's input is frozen while paused.
+    this.input.keyboard?.on('keydown-ESC', this.togglePause, this);
+    this.input.keyboard?.on('keydown-P', this.togglePause, this);
+
     // UI overlay.
     this.scene.launch('UIScene');
     // Push initial state to the UI once it is ready.
     this.time.delayedCall(0, () => this.emitFullState());
+  }
+
+  private togglePause(): void {
+    if (this.gameOver || this.leveling || this.scene.isPaused()) return;
+    this.scene.pause();
+    this.scene.launch('PauseScene', { gameScene: this });
+  }
+
+  /** Snapshot of weapons + passives for the loadout UI / pause screen. */
+  getLoadout(): LoadoutView {
+    return {
+      weapons: this.weapons.describeLoadout().map((w) => ({
+        name: w.def.name,
+        icon: w.def.textureKey,
+        level: w.level,
+        maxLevel: w.def.maxLevel,
+        description: w.def.description,
+      })),
+      passives: [...this.run.passives.values()],
+    };
   }
 
   private setupCollisions(): void {
@@ -223,9 +248,23 @@ export class GameScene extends Phaser.Scene {
   onUpgradePicked(choice: UpgradeChoice): void {
     this.upgrades.apply(choice);
     this.leveling = false;
+
+    // Track passives so the loadout UI can display them.
+    if (choice.kind === 'passive' || choice.kind === 'heal') {
+      const existing = this.run.passives.get(choice.id);
+      if (existing) existing.count += 1;
+      else
+        this.run.passives.set(choice.id, {
+          name: choice.name,
+          icon: choice.icon,
+          count: 1,
+        });
+    }
+
     // Passives may have changed HP / max HP / pickup radius.
     this.events.emit(EVENTS.HP_CHANGED, Math.max(0, this.run.hp), this.run.maxHp);
     this.events.emit(EVENTS.XP_CHANGED, this.xp.progress, this.run.level);
+    this.events.emit(EVENTS.LOADOUT_CHANGED, this.getLoadout());
     if (this.pendingLevelUps > 0) this.openLevelUp();
     else this.scene.resume();
   }
@@ -270,6 +309,7 @@ export class GameScene extends Phaser.Scene {
     this.events.emit(EVENTS.GOLD_CHANGED, this.run.gold);
     this.events.emit(EVENTS.KILLS_CHANGED, this.run.kills);
     this.events.emit(EVENTS.TIMER, this.run.elapsed);
+    this.events.emit(EVENTS.LOADOUT_CHANGED, this.getLoadout());
   }
 
   update(_time: number, delta: number): void {

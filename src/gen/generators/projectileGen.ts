@@ -51,11 +51,11 @@ export function generateProjectiles(scene: Phaser.Scene): void {
   aura.generateTexture('aura-field', ar * 2, ar * 2);
   aura.destroy();
 
-  // Orbiting blade: a small crisp diamond/star shard.
+  // Orbiting blade: a crisp diamond shard. Drawn as nested diamonds so the
+  // corners of the texture stay transparent (no dark square background).
   const blade = scene.make.graphics({ x: 0, y: 0 }, false);
+  // Dark outline diamond (fills to the edge midpoints, corners transparent).
   blade.fillStyle(0x21161f, 1);
-  blade.fillRect(0, 0, 14, 14);
-  blade.fillStyle(0xcfd6e6, 1);
   blade.beginPath();
   blade.moveTo(7, 0);
   blade.lineTo(14, 7);
@@ -63,11 +63,21 @@ export function generateProjectiles(scene: Phaser.Scene): void {
   blade.lineTo(0, 7);
   blade.closePath();
   blade.fillPath();
-  blade.fillStyle(0xffffff, 1);
+  // Inner steel diamond.
+  blade.fillStyle(0xcfd6e6, 1);
   blade.beginPath();
   blade.moveTo(7, 2);
-  blade.lineTo(11, 7);
-  blade.lineTo(7, 7);
+  blade.lineTo(12, 7);
+  blade.lineTo(7, 12);
+  blade.lineTo(2, 7);
+  blade.closePath();
+  blade.fillPath();
+  // Highlight glint.
+  blade.fillStyle(0xffffff, 1);
+  blade.beginPath();
+  blade.moveTo(7, 3);
+  blade.lineTo(10, 6);
+  blade.lineTo(7, 6);
   blade.closePath();
   blade.fillPath();
   blade.generateTexture('blade', 14, 14);

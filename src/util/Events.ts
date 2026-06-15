@@ -6,6 +6,7 @@ export const EVENTS = {
   TIMER: 'timer',
   GOLD_CHANGED: 'gold-changed',
   KILLS_CHANGED: 'kills-changed',
+  LOADOUT_CHANGED: 'loadout-changed',
   BOSS_SPAWNED: 'boss-spawned',
   BOSS_DIED: 'boss-died',
   PLAYER_DIED: 'player-died',

@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { EVENTS } from '../util/Events';
+import { GAME } from '../config/GameConfig';
+import type { LoadoutView } from '../types';
 import type { GameScene } from './GameScene';
 
 /**
@@ -21,6 +23,8 @@ export class UIScene extends Phaser.Scene {
   private bossContainer!: Phaser.GameObjects.Container;
   private bossBar!: Phaser.GameObjects.Rectangle;
   private bossBarWidth = 0;
+
+  private loadoutContainer!: Phaser.GameObjects.Container;
 
   constructor() {
     super('UIScene');
@@ -109,7 +113,55 @@ export class UIScene extends Phaser.Scene {
       .container(bx, by, [bg, this.bossBar, label])
       .setVisible(false);
 
+    // --- Loadout bar (weapon + passive icons), refreshed on change ---
+    this.loadoutContainer = this.add.container(pad, 78);
+
+    // Pause hint.
+    this.add
+      .text(pad, height - 22, 'Esc / P: Pause', {
+        fontFamily: 'Courier New, monospace',
+        fontSize: '12px',
+        color: '#6a7088',
+      })
+      .setOrigin(0, 0);
+
     this.bindEvents();
+  }
+
+  /** Rebuild the compact weapon/passive icon row from a loadout snapshot. */
+  private rebuildLoadout(view: LoadoutView): void {
+    this.loadoutContainer.removeAll(true);
+    const cell = 30;
+    let x = 0;
+
+    const addChip = (icon: string, badge: string, tint?: number) => {
+      const bg = this.add
+        .rectangle(x, 0, cell - 4, cell - 4, 0x1a1726, 0.85)
+        .setOrigin(0)
+        .setStrokeStyle(1, 0x3f6fc0);
+      const img = this.add
+        .image(x + (cell - 4) / 2, (cell - 4) / 2, icon)
+        .setScale(GAME.spriteScale * 0.5);
+      if (tint !== undefined) img.setTint(tint);
+      const txt = this.add
+        .text(x + cell - 6, cell - 8, badge, {
+          fontFamily: 'Courier New, monospace',
+          fontSize: '10px',
+          color: '#f2c14e',
+        })
+        .setOrigin(1, 1);
+      this.loadoutContainer.add([bg, img, txt]);
+      x += cell;
+    };
+
+    for (const w of view.weapons) {
+      addChip(w.icon, w.level >= w.maxLevel ? 'MAX' : `${w.level}`);
+    }
+    // Small gap then passives.
+    if (view.passives.length > 0) x += 8;
+    for (const p of view.passives) {
+      addChip(p.icon, p.count > 1 ? `x${p.count}` : '');
+    }
   }
 
   private bindEvents(): void {
@@ -121,12 +173,14 @@ export class UIScene extends Phaser.Scene {
     ev.on(EVENTS.KILLS_CHANGED, (k: number) => this.killsText.setText(`☠ ${k}`));
     ev.on(EVENTS.BOSS_SPAWNED, () => this.bossContainer.setVisible(true));
     ev.on(EVENTS.BOSS_DIED, () => this.bossContainer.setVisible(false));
+    ev.on(EVENTS.LOADOUT_CHANGED, this.rebuildLoadout, this);
 
     // Clean up listeners if this scene shuts down.
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       ev.off(EVENTS.HP_CHANGED, this.onHp, this);
       ev.off(EVENTS.XP_CHANGED, this.onXp, this);
       ev.off(EVENTS.TIMER, this.onTimer, this);
+      ev.off(EVENTS.LOADOUT_CHANGED, this.rebuildLoadout, this);
     });
   }
 

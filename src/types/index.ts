@@ -67,6 +67,12 @@ export interface UpgradeChoice {
   apply: (run: RunState, weapons: WeaponSystem) => void;
 }
 
+/** Snapshot of the player's current weapons and passives, for the loadout UI. */
+export interface LoadoutView {
+  weapons: { name: string; icon: string; level: number; maxLevel: number; description: string }[];
+  passives: { name: string; icon: string; count: number }[];
+}
+
 export interface WaveDef {
   /** Run time (seconds) at which this wave becomes active. */
   startSec: number;

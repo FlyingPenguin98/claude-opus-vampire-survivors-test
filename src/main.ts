@@ -6,6 +6,7 @@ import { TitleScene } from './scenes/TitleScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
 import { LevelUpScene } from './scenes/LevelUpScene';
+import { PauseScene } from './scenes/PauseScene';
 import { GameOverScene } from './scenes/GameOverScene';
 
 const config: Phaser.Types.Core.GameConfig = {
@@ -35,6 +36,7 @@ const config: Phaser.Types.Core.GameConfig = {
     GameScene,
     UIScene,
     LevelUpScene,
+    PauseScene,
     GameOverScene,
   ],
 };

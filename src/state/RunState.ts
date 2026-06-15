@@ -22,6 +22,9 @@ export class RunState {
   /** Bonus projectile count added to every projectile weapon. */
   projectileBonus = 0;
 
+  /** Acquired passive upgrades, keyed by id, for the loadout display. */
+  passives = new Map<string, { name: string; icon: string; count: number }>();
+
   get pickupRadius(): number {
     return PLAYER.basePickupRadius * this.pickupRadiusMult;
   }
