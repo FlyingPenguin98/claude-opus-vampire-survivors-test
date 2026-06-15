@@ -1,0 +1,60 @@
+import type { EnemyDef } from '../types';
+
+export const ENEMIES: Record<string, EnemyDef> = {
+  bat: {
+    id: 'bat',
+    textureKey: 'bat',
+    hp: 6,
+    speed: 115,
+    contactDamage: 5,
+    xpValue: 1,
+    goldChance: 0.02,
+    behavior: 'fast',
+    bodyRadius: 4,
+  },
+  zombie: {
+    id: 'zombie',
+    textureKey: 'zombie',
+    hp: 14,
+    speed: 60,
+    contactDamage: 9,
+    xpValue: 2,
+    goldChance: 0.04,
+    behavior: 'chase',
+    bodyRadius: 5,
+  },
+  slime: {
+    id: 'slime',
+    textureKey: 'slime',
+    hp: 22,
+    speed: 48,
+    contactDamage: 7,
+    xpValue: 3,
+    goldChance: 0.05,
+    behavior: 'chase',
+    bodyRadius: 5,
+  },
+  skeleton: {
+    id: 'skeleton',
+    textureKey: 'skeleton',
+    hp: 40,
+    speed: 72,
+    contactDamage: 13,
+    xpValue: 5,
+    goldChance: 0.08,
+    behavior: 'tank',
+    bodyRadius: 5,
+  },
+};
+
+export const BOSS: EnemyDef = {
+  id: 'revenant',
+  textureKey: 'boss',
+  hp: 2600,
+  speed: 70,
+  contactDamage: 28,
+  xpValue: 120,
+  goldChance: 1,
+  behavior: 'chase',
+  bodyRadius: 13,
+};

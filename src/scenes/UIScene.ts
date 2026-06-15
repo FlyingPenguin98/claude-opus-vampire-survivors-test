@@ -1,0 +1,159 @@
+import Phaser from 'phaser';
+import { EVENTS } from '../util/Events';
+import type { GameScene } from './GameScene';
+
+/**
+ * HUD overlay rendered above the GameScene. Reacts to gameplay events; never
+ * touches the simulation. Runs in parallel with GameScene (and keeps running while
+ * GameScene is paused for level-up, so the bars stay visible).
+ */
+export class UIScene extends Phaser.Scene {
+  private gameScene!: GameScene;
+
+  private hpBar!: Phaser.GameObjects.Rectangle;
+  private hpText!: Phaser.GameObjects.Text;
+  private xpBar!: Phaser.GameObjects.Rectangle;
+  private levelText!: Phaser.GameObjects.Text;
+  private timerText!: Phaser.GameObjects.Text;
+  private goldText!: Phaser.GameObjects.Text;
+  private killsText!: Phaser.GameObjects.Text;
+
+  private bossContainer!: Phaser.GameObjects.Container;
+  private bossBar!: Phaser.GameObjects.Rectangle;
+  private bossBarWidth = 0;
+
+  constructor() {
+    super('UIScene');
+  }
+
+  create(): void {
+    this.gameScene = this.scene.get('GameScene') as GameScene;
+    const { width } = this.scale;
+    const pad = 16;
+
+    // --- XP bar (full-width, top) ---
+    this.add.rectangle(0, 0, width, 10, 0x000000, 0.6).setOrigin(0);
+    this.xpBar = this.add.rectangle(0, 0, 0, 10, 0x6ad8ff).setOrigin(0);
+
+    // --- Level badge ---
+    this.levelText = this.add
+      .text(pad, 18, 'LV 1', {
+        fontFamily: 'Georgia, serif',
+        fontSize: '20px',
+        color: '#f2c14e',
+        stroke: '#21161f',
+        strokeThickness: 4,
+      })
+      .setOrigin(0, 0);
+
+    // --- HP bar ---
+    const hpY = 50;
+    this.add
+      .rectangle(pad, hpY, 220, 18, 0x3a0e14)
+      .setOrigin(0)
+      .setStrokeStyle(2, 0x21161f);
+    this.hpBar = this.add.rectangle(pad + 2, hpY + 2, 216, 14, 0x46d873).setOrigin(0);
+    this.hpText = this.add
+      .text(pad + 110, hpY + 9, '100 / 100', {
+        fontFamily: 'Courier New, monospace',
+        fontSize: '12px',
+        color: '#ffffff',
+      })
+      .setOrigin(0.5);
+
+    // --- Timer (top center) ---
+    this.timerText = this.add
+      .text(width / 2, 22, '0:00', {
+        fontFamily: 'Georgia, serif',
+        fontSize: '28px',
+        color: '#ffffff',
+        stroke: '#21161f',
+        strokeThickness: 5,
+      })
+      .setOrigin(0.5);
+
+    // --- Gold + kills (top right) ---
+    this.goldText = this.add
+      .text(width - pad, 18, '🪙 0', {
+        fontFamily: 'Courier New, monospace',
+        fontSize: '18px',
+        color: '#f2c14e',
+      })
+      .setOrigin(1, 0);
+    this.killsText = this.add
+      .text(width - pad, 44, '☠ 0', {
+        fontFamily: 'Courier New, monospace',
+        fontSize: '16px',
+        color: '#cfd6e6',
+      })
+      .setOrigin(1, 0);
+
+    // --- Boss bar (hidden until a boss spawns) ---
+    const { height } = this.scale;
+    this.bossBarWidth = width * 0.6;
+    const bx = (width - this.bossBarWidth) / 2;
+    const by = height - 36;
+    const bg = this.add
+      .rectangle(0, 0, this.bossBarWidth, 16, 0x160a14)
+      .setOrigin(0)
+      .setStrokeStyle(2, 0xff486a);
+    this.bossBar = this.add.rectangle(2, 2, this.bossBarWidth - 4, 12, 0xc43358).setOrigin(0);
+    const label = this.add
+      .text(this.bossBarWidth / 2, -14, 'REVENANT LORD', {
+        fontFamily: 'Georgia, serif',
+        fontSize: '14px',
+        color: '#ff486a',
+      })
+      .setOrigin(0.5, 1);
+    this.bossContainer = this.add
+      .container(bx, by, [bg, this.bossBar, label])
+      .setVisible(false);
+
+    this.bindEvents();
+  }
+
+  private bindEvents(): void {
+    const ev = this.gameScene.events;
+    ev.on(EVENTS.HP_CHANGED, this.onHp, this);
+    ev.on(EVENTS.XP_CHANGED, this.onXp, this);
+    ev.on(EVENTS.TIMER, this.onTimer, this);
+    ev.on(EVENTS.GOLD_CHANGED, (g: number) => this.goldText.setText(`🪙 ${g}`));
+    ev.on(EVENTS.KILLS_CHANGED, (k: number) => this.killsText.setText(`☠ ${k}`));
+    ev.on(EVENTS.BOSS_SPAWNED, () => this.bossContainer.setVisible(true));
+    ev.on(EVENTS.BOSS_DIED, () => this.bossContainer.setVisible(false));
+
+    // Clean up listeners if this scene shuts down.
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      ev.off(EVENTS.HP_CHANGED, this.onHp, this);
+      ev.off(EVENTS.XP_CHANGED, this.onXp, this);
+      ev.off(EVENTS.TIMER, this.onTimer, this);
+    });
+  }
+
+  private onHp(hp: number, maxHp: number): void {
+    const frac = Phaser.Math.Clamp(hp / maxHp, 0, 1);
+    this.hpBar.width = 216 * frac;
+    this.hpBar.fillColor = frac > 0.5 ? 0x46d873 : frac > 0.25 ? 0xf2c14e : 0xff5a5a;
+    this.hpText.setText(`${Math.ceil(hp)} / ${maxHp}`);
+  }
+
+  private onXp(progress: number, level: number): void {
+    this.xpBar.width = this.scale.width * Phaser.Math.Clamp(progress, 0, 1);
+    this.levelText.setText(`LV ${level}`);
+  }
+
+  private onTimer(elapsed: number): void {
+    const m = Math.floor(elapsed / 60);
+    const s = Math.floor(elapsed % 60);
+    this.timerText.setText(`${m}:${String(s).padStart(2, '0')}`);
+  }
+
+  update(): void {
+    // Live boss health bar.
+    const boss = this.gameScene.boss;
+    if (boss && boss.active && this.bossContainer.visible) {
+      const frac = Phaser.Math.Clamp(boss.hp / boss.maxHp, 0, 1);
+      this.bossBar.width = (this.bossBarWidth - 4) * frac;
+    }
+  }
+}
