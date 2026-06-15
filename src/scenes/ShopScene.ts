@@ -30,7 +30,7 @@ export class ShopScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.goldText = this.add
-      .text(width / 2, 58, '', { fontFamily: 'Courier New, monospace', fontSize: '16px', color: '#f2c14e' })
+      .text(width / 2, 60, '', { fontFamily: 'Courier New, monospace', fontSize: '18px', color: '#ffe08a' })
       .setOrigin(0.5);
 
     const defs = Object.values(POWERUPS);
@@ -68,34 +68,34 @@ export class ShopScene extends Phaser.Scene {
   }
 
   private createCard(def: PowerupDef, x: number, y: number, w: number, h: number): void {
-    const border = this.add.rectangle(x, y, w, h, 0x1a1726).setStrokeStyle(2, 0x3f6fc0);
-    const icon = this.add.image(x - w / 2 + 26, y, def.icon).setScale(GAME.spriteScale * 0.8);
-    this.add.text(x - w / 2 + 50, y - h / 2 + 12, def.name, {
-      fontFamily: 'Georgia, serif', fontSize: '16px', color: '#ffffff',
+    const border = this.add.rectangle(x, y, w, h, 0x2a2740).setStrokeStyle(2, 0x5a7fd0);
+    const icon = this.add.image(x - w / 2 + 26, y, def.icon).setScale(GAME.spriteScale * 0.85);
+    this.add.text(x - w / 2 + 50, y - h / 2 + 11, def.name, {
+      fontFamily: 'Georgia, serif', fontSize: '18px', color: '#ffffff',
     }).setOrigin(0, 0);
-    this.add.text(x - w / 2 + 50, y - h / 2 + 34, def.description, {
-      fontFamily: 'Courier New, monospace', fontSize: '11px', color: '#9aa0b4', wordWrap: { width: w - 64 },
+    this.add.text(x - w / 2 + 50, y - h / 2 + 35, def.description, {
+      fontFamily: 'Courier New, monospace', fontSize: '13px', color: '#d4d9ea', wordWrap: { width: w - 64 },
     }).setOrigin(0, 0);
 
     const status = this.add
-      .text(x - w / 2 + 50, y + h / 2 - 22, '', { fontFamily: 'Courier New, monospace', fontSize: '12px', color: '#6ad8ff' })
+      .text(x - w / 2 + 50, y + h / 2 - 22, '', { fontFamily: 'Courier New, monospace', fontSize: '14px', color: '#ffe08a' })
       .setOrigin(0, 0);
 
     const redraw = () => {
       const lvl = this.meta.powerups[def.id] ?? 0;
       if (lvl >= def.maxLevel) {
-        status.setText(`MAX  (Lv ${lvl}/${def.maxLevel})`).setColor('#46d873');
+        status.setText(`MAX  (Lv ${lvl}/${def.maxLevel})`).setColor('#7dffa0');
         border.setStrokeStyle(2, 0x46d873);
       } else {
         const cost = def.cost(lvl);
         const afford = this.meta.spendableGold >= cost;
-        status.setText(`Lv ${lvl}/${def.maxLevel}   •   Cost ${cost}🪙`).setColor(afford ? '#f2c14e' : '#aa5555');
+        status.setText(`Lv ${lvl}/${def.maxLevel}   •   Cost ${cost}🪙`).setColor(afford ? '#ffe08a' : '#ff8a8a');
       }
     };
 
     border.setInteractive({ useHandCursor: true });
-    border.on('pointerover', () => border.setFillStyle(0x232036));
-    border.on('pointerout', () => border.setFillStyle(0x1a1726));
+    border.on('pointerover', () => border.setFillStyle(0x363152));
+    border.on('pointerout', () => border.setFillStyle(0x2a2740));
     border.on('pointerdown', () => {
       const lvl = this.meta.powerups[def.id] ?? 0;
       if (lvl >= def.maxLevel) return;

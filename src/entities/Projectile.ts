@@ -25,12 +25,15 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     damage: number,
     pierce: number,
     texture: string,
+    tint?: number,
     lifetimeMs = 2200
   ): void {
     this.damage = damage;
     this.pierce = pierce;
     this.hits.clear();
     this.setTexture(texture);
+    if (tint !== undefined) this.setTint(tint);
+    else this.clearTint();
     this.enableBody(true, x, y, true, true);
     this.setActive(true).setVisible(true);
     this.setScale(GAME.spriteScale * 0.5);

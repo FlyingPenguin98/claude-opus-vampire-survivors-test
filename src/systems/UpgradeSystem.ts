@@ -1,6 +1,6 @@
 import type { RunState } from '../state/RunState';
 import type { UpgradeChoice } from '../types';
-import { OFFERABLE_WEAPONS } from '../data/weapons';
+import { WEAPONS, OFFERABLE_WEAPONS } from '../data/weapons';
 import { PASSIVE_UPGRADES, HEAL_CHOICE } from '../data/upgrades';
 import { weightedSample } from '../util/math';
 import type { WeaponSystem } from './WeaponSystem';
@@ -9,9 +9,11 @@ import type { WeaponSystem } from './WeaponSystem';
 const MAX_WEAPONS = 6;
 
 /**
- * Builds the level-up choice list. Combines: new-weapon offers, level-up offers for
- * owned non-maxed weapons, and passive stat boosts. Always returns up to 3 choices,
- * falling back to a heal so the modal is never empty.
+ * Builds the level-up choice list. For each owned, non-maxed weapon it rolls a
+ * RANDOM upgrade from that weapon's pool, so the same weapon offers different
+ * improvements across level-ups and runs. New-weapon offers are biased toward
+ * archetypes (projectile/aura/orbit) the player doesn't already have, so a loadout
+ * doesn't end up as, say, four orbit/aura weapons.
  */
 export class UpgradeSystem {
   private run: RunState;
@@ -24,49 +26,59 @@ export class UpgradeSystem {
 
   buildChoices(count = 3): UpgradeChoice[] {
     const pool: UpgradeChoice[] = [];
+    const weights = new Map<UpgradeChoice, number>();
+    const add = (c: UpgradeChoice, w: number) => {
+      pool.push(c);
+      weights.set(c, w);
+    };
 
-    // Level-up offers for owned, non-maxed weapons.
+    // Level-up offers: one random upgrade rolled from each owned, non-maxed weapon.
     for (const id of this.weapons.ownedIds) {
       if (this.weapons.isMaxed(id)) continue;
       const inst = this.weapons.getInstance(id)!;
+      const available = this.weapons.availableMods(id);
+      if (available.length === 0) continue;
+      const mod = weightedSample(available, 1, (m) => m.weight ?? 1)[0];
       const nextLevel = inst.level + 1;
-      pool.push({
-        id: `weaponLevel-${id}`,
-        name: inst.def.name,
-        description: inst.def.levels[nextLevel - 2]?.text ?? 'Improve this weapon.',
-        icon: inst.def.textureKey,
-        kind: 'weaponLevel',
-        badge: `Lv ${nextLevel}`,
-        apply: (_run, weapons) => weapons.levelUpWeapon(id),
-      });
+      add(
+        {
+          id: `weaponLevel-${id}-${mod.id}`,
+          name: inst.def.name,
+          description: mod.text,
+          icon: inst.def.textureKey,
+          kind: 'weaponLevel',
+          badge: `Lv ${nextLevel}`,
+          apply: (_run, weapons) => weapons.applyMod(id, mod.id),
+        },
+        1.1
+      );
     }
 
-    // New-weapon offers (if loadout has room).
+    // New-weapon offers (if loadout has room), biased toward missing archetypes.
     if (this.weapons.weaponCount < MAX_WEAPONS) {
+      const ownedTypes = new Set(this.weapons.ownedIds.map((id) => WEAPONS[id].type));
       for (const def of OFFERABLE_WEAPONS) {
         if (this.weapons.hasWeapon(def.id)) continue;
-        pool.push({
-          id: `newWeapon-${def.id}`,
-          name: def.name,
-          description: def.description,
-          icon: def.textureKey,
-          kind: 'newWeapon',
-          badge: 'New!',
-          apply: (_run, weapons) => weapons.addWeapon(def.id),
-        });
+        const w = ownedTypes.has(def.type) ? 1.1 : 1.9;
+        add(
+          {
+            id: `newWeapon-${def.id}`,
+            name: def.name,
+            description: def.description,
+            icon: def.textureKey,
+            kind: 'newWeapon',
+            badge: 'New!',
+            apply: (_run, weapons) => weapons.addWeapon(def.id),
+          },
+          w
+        );
       }
     }
 
     // Passive boosts (can repeat).
-    pool.push(...PASSIVE_UPGRADES);
+    for (const p of PASSIVE_UPGRADES) add(p, 1);
 
-    const chosen = weightedSample(pool, count, (c) => {
-      // Slightly favor new weapons early, level-ups otherwise.
-      if (c.kind === 'newWeapon') return 1.3;
-      if (c.kind === 'weaponLevel') return 1.1;
-      return 1;
-    });
-
+    const chosen = weightedSample(pool, count, (c) => weights.get(c) ?? 1);
     if (chosen.length === 0) chosen.push(HEAL_CHOICE);
     return chosen;
   }

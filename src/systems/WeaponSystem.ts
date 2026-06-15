@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { GAME } from '../config/GameConfig';
 import type { RunState } from '../state/RunState';
-import type { WeaponDef, WeaponInstance } from '../types';
+import type { WeaponDef, WeaponInstance, WeaponMod } from '../types';
 import { WEAPONS, EVOLUTIONS, type EvolutionRecipe } from '../data/weapons';
 import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
@@ -78,14 +78,12 @@ export class WeaponSystem {
   }
 
   addWeapon(id: string): void {
-    if (this.owned.has(id)) {
-      this.levelUpWeapon(id);
-      return;
-    }
+    if (this.owned.has(id)) return; // owned weapons are improved via applyMod
     const def = WEAPONS[id];
     const inst: WeaponInstance = {
       def,
       level: 1,
+      taken: [],
       damage: def.damage,
       cooldownMs: def.cooldownMs,
       cooldownRemaining: 0,
@@ -99,40 +97,51 @@ export class WeaponSystem {
     this.refreshDerivedStats();
   }
 
-  levelUpWeapon(id: string): void {
+  /** Mods this weapon can still be offered (repeatable, or not yet taken). */
+  availableMods(id: string): WeaponMod[] {
+    const inst = this.owned.get(id);
+    if (!inst) return [];
+    return inst.def.mods.filter((m) => m.repeatable || !inst.taken.includes(m.id));
+  }
+
+  /** Apply a specific upgrade chosen from the weapon's pool. */
+  applyMod(id: string, modId: string): void {
     const inst = this.owned.get(id);
     if (!inst || inst.level >= inst.def.maxLevel) return;
-    inst.level += 1;
+    inst.taken.push(modId);
+    inst.level = inst.taken.length + 1;
     this.recompute(inst);
     this.refreshDerivedStats();
   }
 
-  /**
-   * Recompute an instance's stats from its base def by applying all level deltas up
-   * to the current level. damage/cooldown/radius multipliers are absolute-from-base
-   * (latest reached wins); count/pierce additions accumulate.
-   */
+  /** Recompute an instance's stats from base by applying each taken upgrade in order. */
   private recompute(inst: WeaponInstance): void {
     const def = inst.def;
-    let dmgMult = 1;
-    let cdMult = 1;
-    let radMult = 1;
-    let addCount = 0;
-    let addPierce = 0;
-    for (let lvl = 2; lvl <= inst.level; lvl++) {
-      const d = def.levels[lvl - 2];
-      if (!d) continue;
-      if (d.damageMult !== undefined) dmgMult = d.damageMult;
-      if (d.cooldownMult !== undefined) cdMult = d.cooldownMult;
-      if (d.radiusMult !== undefined) radMult = d.radiusMult;
-      addCount += d.addCount ?? 0;
-      addPierce += d.addPierce ?? 0;
+    let damage = def.damage;
+    let cooldown = def.cooldownMs;
+    let radius = def.radius ?? 0;
+    let speed = def.projectileSpeed ?? 0;
+    let count = def.count ?? 1;
+    let pierce = def.pierce ?? 0;
+    let tint: number | undefined;
+    for (const modId of inst.taken) {
+      const m = def.mods.find((x) => x.id === modId);
+      if (!m) continue;
+      if (m.dmgMul) damage *= m.dmgMul;
+      if (m.cdMul) cooldown *= m.cdMul;
+      if (m.radiusMul) radius *= m.radiusMul;
+      if (m.speedMul) speed *= m.speedMul;
+      if (m.addCount) count += m.addCount;
+      if (m.addPierce) pierce += m.addPierce;
+      if (m.tint !== undefined) tint = m.tint;
     }
-    inst.damage = Math.round(def.damage * dmgMult);
-    inst.cooldownMs = Math.round(def.cooldownMs * cdMult);
-    inst.radius = Math.round((def.radius ?? 0) * radMult);
-    inst.pierce = (def.pierce ?? 0) + addPierce;
-    inst.count = (def.count ?? 1) + addCount; // projectile bonus added in refreshDerivedStats
+    inst.damage = Math.round(damage);
+    inst.cooldownMs = Math.round(cooldown);
+    inst.radius = Math.round(radius);
+    inst.projectileSpeed = Math.round(speed);
+    inst.pierce = pierce;
+    inst.count = count; // projectile bonus added in refreshDerivedStats
+    inst.tint = tint;
   }
 
   /** Recompute stats affected by global passives (called when passives change). */
@@ -226,7 +235,7 @@ export class WeaponSystem {
       const offset = (i - (count - 1) / 2) * spread;
       const proj = this.ctx.getProjectile();
       if (!proj) break;
-      proj.fire(player.x, player.y, baseAngle + offset, speed, dmg, inst.pierce, inst.def.textureKey);
+      proj.fire(player.x, player.y, baseAngle + offset, speed, dmg, inst.pierce, inst.def.textureKey, inst.tint);
     }
     return true;
   }
@@ -255,6 +264,7 @@ export class WeaponSystem {
         this.auras.set(inst.def.id, sprite);
       }
       sprite.setPosition(player.x, player.y);
+      sprite.setTint(inst.tint ?? AURA_TINT[inst.def.id] ?? 0xffffff);
       // aura-field texture is 128px (radius 64); scale to desired world radius.
       sprite.setScale((inst.radius * run.areaMult) / 64);
     }
@@ -326,7 +336,10 @@ export class WeaponSystem {
         const a = angle + (i / n) * Math.PI * 2;
         const bx = player.x + Math.cos(a) * radius;
         const by = player.y + Math.sin(a) * radius;
-        arr[i].setPosition(bx, by).setRotation(a * 2);
+        const blade = arr[i];
+        blade.setPosition(bx, by).setRotation(a * 2);
+        if (inst.tint !== undefined) blade.setTint(inst.tint);
+        else blade.clearTint();
         for (const e of enemies) {
           if (!e.active) continue;
           if (Phaser.Math.Distance.Squared(bx, by, e.x, e.y) <= r2) {

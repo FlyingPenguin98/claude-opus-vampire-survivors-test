@@ -49,20 +49,25 @@ export interface EnemyDef {
 
 export type WeaponType = 'projectile' | 'aura' | 'orbit';
 
-/** Per-level stat changes for a weapon, applied relative to the base def values. */
-export interface WeaponLevelDelta {
-  /** Multiply BASE damage by this factor at/after this level. */
-  damageMult?: number;
-  /** Multiply BASE cooldown by this factor. */
-  cooldownMult?: number;
-  /** Multiply BASE radius by this factor. */
-  radiusMult?: number;
-  /** Add this many projectiles/blades (accumulates across levels). */
-  addCount?: number;
-  /** Add this much pierce (accumulates across levels). */
-  addPierce?: number;
-  /** Card text describing this level. */
+/**
+ * A single possible weapon upgrade drawn from the weapon's pool on level-up.
+ * Effects are applied incrementally (in the order taken) when recomputing stats.
+ * `repeatable` mods can be offered/taken more than once.
+ */
+export interface WeaponMod {
+  id: string;
   text: string;
+  dmgMul?: number;
+  cdMul?: number;
+  radiusMul?: number;
+  addCount?: number;
+  addPierce?: number;
+  speedMul?: number;
+  /** Recolor the weapon's projectiles/field (elemental infusion). */
+  tint?: number;
+  repeatable?: boolean;
+  /** Selection weight when rolling which upgrade to offer (default 1). */
+  weight?: number;
 }
 
 export interface WeaponDef {
@@ -71,8 +76,9 @@ export interface WeaponDef {
   type: WeaponType;
   textureKey: string;
   description: string;
+  /** Max number of upgrades this weapon can take (level cap = maxLevel). */
   maxLevel: number;
-  /** Stats at level 1. Later levels apply deltas from `levels`. */
+  /** Stats at level 1. Upgrades from `mods` are applied on top. */
   damage: number;
   cooldownMs: number;
   /** projectile */
@@ -81,8 +87,8 @@ export interface WeaponDef {
   count?: number;
   /** aura / orbit */
   radius?: number;
-  /** Per-level deltas; index 0 = level 2, index 1 = level 3, ... */
-  levels: WeaponLevelDelta[];
+  /** Pool of possible upgrades; a random one is offered each level-up. */
+  mods: WeaponMod[];
   /** Evolution: weapon id this becomes when evolved. */
   evolvesInto?: string;
   /** Evolution: passive id that must be owned to evolve. */
@@ -95,6 +101,8 @@ export interface WeaponDef {
 export interface WeaponInstance {
   def: WeaponDef;
   level: number;
+  /** Ids of upgrades taken so far (in order; repeats allowed). */
+  taken: string[];
   damage: number;
   cooldownMs: number;
   cooldownRemaining: number;
@@ -102,6 +110,8 @@ export interface WeaponInstance {
   pierce: number;
   count: number;
   radius: number;
+  /** Current elemental tint, if any infusion was taken. */
+  tint?: number;
 }
 
 export type UpgradeKind = 'newWeapon' | 'weaponLevel' | 'passive' | 'heal' | 'evolution';
