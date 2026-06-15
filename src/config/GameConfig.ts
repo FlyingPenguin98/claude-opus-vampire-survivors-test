@@ -40,5 +40,7 @@ export const SPAWN = {
   /** Hard cap on simultaneously-alive enemies for performance. */
   maxAlive: 320,
   /** Enemies spawn on a ring this far outside the visible viewport. */
-  spawnRingPadding: 80,
+  spawnRingPadding: 120,
+  /** Grace period (ms) before the first enemies spawn at the start of a run. */
+  initialDelayMs: 1500,
 } as const;

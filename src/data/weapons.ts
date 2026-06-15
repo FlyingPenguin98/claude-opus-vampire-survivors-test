@@ -51,7 +51,8 @@ export const WEAPONS: Record<string, WeaponDef> = {
     id: 'aura',
     name: 'Frost Aura',
     type: 'aura',
-    textureKey: 'aura-field',
+    // Small UI icon; the in-world field uses the large 'aura-field' texture directly.
+    textureKey: 'icon-frost',
     description: 'A chilling field damages nearby enemies.',
     maxLevel: 6,
     damage: 4,

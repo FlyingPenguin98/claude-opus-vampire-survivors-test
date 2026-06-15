@@ -8,6 +8,13 @@ and let your weapons fire automatically while you level up and build a deadly lo
 are drawn pixel-by-pixel into Phaser canvas textures with limited palettes, dark
 outlines, and shade ramps, then displayed with crisp nearest-neighbor scaling.
 
+## Play online
+
+- **GitHub Pages (auto-deployed):** https://flyingpenguin98.github.io/claude-opus-vampire-survivors-test/
+  Built and published automatically by `.github/workflows/deploy.yml` on every push.
+- **Instant preview via githack:** https://raw.githack.com/FlyingPenguin98/claude-opus-vampire-survivors-test/claude/vampire-survivors-topdown-h8y6t0/dist/index.html
+  (serves the committed `dist/` — handy for quick sharing).
+
 ## Tech
 
 - [Phaser 3](https://phaser.io/) (Arcade physics) + TypeScript

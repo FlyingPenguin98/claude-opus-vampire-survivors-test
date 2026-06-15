@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { SPAWN } from '../config/GameConfig';
+import { GAME, SPAWN } from '../config/GameConfig';
 import { ENEMIES, BOSS } from '../data/enemies';
 import { WAVES, BOSS_TIME_SEC } from '../data/waves';
 import type { WaveDef } from '../types';
@@ -14,7 +14,8 @@ export class Spawner {
   private enemies: Phaser.Physics.Arcade.Group;
   private targetPos: Phaser.Math.Vector2;
 
-  private spawnTimer = 0;
+  // Grace period before the first wave so the player isn't swarmed on spawn.
+  private spawnTimer: number = SPAWN.initialDelayMs;
   private bossSpawned = false;
   private onBoss?: (boss: Enemy) => void;
 
@@ -39,11 +40,20 @@ export class Spawner {
     return wave;
   }
 
-  /** A point on a ring just outside the visible viewport, around the player. */
+  /**
+   * A point on a ring guaranteed to be just outside the visible viewport.
+   * We size the ring from the fixed game resolution rather than the camera's
+   * worldView, because on the very first frame the worldView is still zero-sized
+   * (which previously made enemies spawn on top of the player).
+   */
   private ringPoint(): { x: number; y: number } {
     const view = this.scene.cameras.main.worldView;
+    const viewDiag = Math.hypot(view.width || GAME.width, view.height || GAME.height);
+    const baseDiag = Math.hypot(GAME.width, GAME.height);
     const radius =
-      Math.hypot(view.width, view.height) / 2 + SPAWN.spawnRingPadding;
+      Math.max(viewDiag, baseDiag) / 2 +
+      SPAWN.spawnRingPadding +
+      Phaser.Math.FloatBetween(0, 220);
     const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
     return {
       x: this.targetPos.x + Math.cos(angle) * radius,
