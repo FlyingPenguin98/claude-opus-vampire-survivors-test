@@ -21,12 +21,12 @@ const area = (): WeaponMod => ({ id: 'area', text: '+20% area', radiusMul: 1.2, 
 const areaBig = (): WeaponMod => ({ id: 'areaBig', text: '+45% area', radiusMul: 1.45, weight: 0.7 });
 const orbCount = (): WeaponMod => ({ id: 'orbCount', text: '+1 orbiting projectile', addCount: 1, weight: 1.2 });
 
-// Elemental infusions (recolor + a small bonus) for flavor and visible variety.
-const elFrost = (): WeaponMod => ({ id: 'el-frost', text: 'Frost infusion — chilling blue (+10% dmg)', dmgMul: 1.1, tint: 0x9fe8ff });
-const elFlame = (): WeaponMod => ({ id: 'el-flame', text: 'Flame infusion — searing orange (+15% dmg)', dmgMul: 1.15, tint: 0xff8a3a });
-const elVenom = (): WeaponMod => ({ id: 'el-venom', text: 'Venom infusion — toxic green (+10% dmg)', dmgMul: 1.1, tint: 0x8aff5a });
-const elShadow = (): WeaponMod => ({ id: 'el-shadow', text: 'Shadow infusion — violet (+15% dmg)', dmgMul: 1.15, tint: 0xc08aff });
-const elHoly = (): WeaponMod => ({ id: 'el-holy', text: 'Radiant infusion — golden light (+12% dmg)', dmgMul: 1.12, tint: 0xfff0a0 });
+// Elemental infusions: recolor + a status effect on hit (see GameScene.applyElement).
+const elFrost = (): WeaponMod => ({ id: 'el-frost', text: 'Frost infusion — chills & slows enemies hit', dmgMul: 1.05, tint: 0x9fe8ff, element: 'frost' });
+const elFlame = (): WeaponMod => ({ id: 'el-flame', text: 'Flame infusion — sets enemies ablaze (burn)', dmgMul: 1.1, tint: 0xff8a3a, element: 'flame' });
+const elVenom = (): WeaponMod => ({ id: 'el-venom', text: 'Venom infusion — lingering poison damage', dmgMul: 1.05, tint: 0x8aff5a, element: 'venom' });
+const elShadow = (): WeaponMod => ({ id: 'el-shadow', text: 'Shadow infusion — curses foes to take +30% damage', dmgMul: 1.1, tint: 0xc08aff, element: 'shadow' });
+const elHoly = (): WeaponMod => ({ id: 'el-holy', text: 'Radiant infusion — smites nearby foes on hit', dmgMul: 1.1, tint: 0xfff0a0, element: 'holy' });
 
 const projPool = (...extra: WeaponMod[]): WeaponMod[] => [dmg(), dmgBig(), cd(), cdBig(), count(), pierce(), speed(), ...extra];
 const auraPool = (...extra: WeaponMod[]): WeaponMod[] => [dmg(), dmgBig(), cd(), cdBig(), area(), areaBig(), ...extra];

@@ -8,7 +8,13 @@ import type { Enemy } from '../entities/Enemy';
 import type { Projectile } from '../entities/Projectile';
 
 /** Callback GameScene provides so all weapon types route kills through one path. */
-export type DamageEnemyFn = (enemy: Enemy, amount: number, fromX?: number, fromY?: number) => void;
+export type DamageEnemyFn = (
+  enemy: Enemy,
+  amount: number,
+  fromX?: number,
+  fromY?: number,
+  element?: string
+) => void;
 
 export interface WeaponContext {
   scene: Phaser.Scene;
@@ -124,6 +130,7 @@ export class WeaponSystem {
     let count = def.count ?? 1;
     let pierce = def.pierce ?? 0;
     let tint: number | undefined;
+    let element: string | undefined;
     for (const modId of inst.taken) {
       const m = def.mods.find((x) => x.id === modId);
       if (!m) continue;
@@ -134,6 +141,7 @@ export class WeaponSystem {
       if (m.addCount) count += m.addCount;
       if (m.addPierce) pierce += m.addPierce;
       if (m.tint !== undefined) tint = m.tint;
+      if (m.element !== undefined) element = m.element;
     }
     inst.damage = Math.round(damage);
     inst.cooldownMs = Math.round(cooldown);
@@ -142,6 +150,7 @@ export class WeaponSystem {
     inst.pierce = pierce;
     inst.count = count; // projectile bonus added in refreshDerivedStats
     inst.tint = tint;
+    inst.element = element;
   }
 
   /** Recompute stats affected by global passives (called when passives change). */
@@ -235,7 +244,7 @@ export class WeaponSystem {
       const offset = (i - (count - 1) / 2) * spread;
       const proj = this.ctx.getProjectile();
       if (!proj) break;
-      proj.fire(player.x, player.y, baseAngle + offset, speed, dmg, inst.pierce, inst.def.textureKey, inst.tint);
+      proj.fire(player.x, player.y, baseAngle + offset, speed, dmg, inst.pierce, inst.def.textureKey, inst.tint, inst.element);
     }
     return true;
   }
@@ -279,7 +288,7 @@ export class WeaponSystem {
     for (const e of children) {
       if (!e.active) continue;
       if (Phaser.Math.Distance.Squared(player.x, player.y, e.x, e.y) <= r2) {
-        this.ctx.damageEnemy(e, dmg, player.x, player.y);
+        this.ctx.damageEnemy(e, dmg, player.x, player.y, inst.element);
       }
     }
   }
@@ -345,7 +354,7 @@ export class WeaponSystem {
           if (Phaser.Math.Distance.Squared(bx, by, e.x, e.y) <= r2) {
             if (time >= e.nextBladeHitAt) {
               e.nextBladeHitAt = time + 350;
-              this.ctx.damageEnemy(e, dmg, bx, by);
+              this.ctx.damageEnemy(e, dmg, bx, by, inst.element);
             }
           }
         }

@@ -6,6 +6,8 @@ import type { Enemy } from './Enemy';
 export class Projectile extends Phaser.Physics.Arcade.Sprite {
   damage = 0;
   pierce = 0;
+  /** Elemental status applied on hit, if any. */
+  element?: string;
   private dieAt = 0;
   /** Enemies already hit (so a piercing shot doesn't multi-hit the same target). */
   private hits = new Set<Enemy>();
@@ -26,10 +28,12 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     pierce: number,
     texture: string,
     tint?: number,
+    element?: string,
     lifetimeMs = 2200
   ): void {
     this.damage = damage;
     this.pierce = pierce;
+    this.element = element;
     this.hits.clear();
     this.setTexture(texture);
     if (tint !== undefined) this.setTint(tint);

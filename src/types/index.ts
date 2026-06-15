@@ -65,6 +65,8 @@ export interface WeaponMod {
   speedMul?: number;
   /** Recolor the weapon's projectiles/field (elemental infusion). */
   tint?: number;
+  /** Status effect applied on hit: frost|flame|venom|shadow|holy. */
+  element?: string;
   repeatable?: boolean;
   /** Selection weight when rolling which upgrade to offer (default 1). */
   weight?: number;
@@ -112,6 +114,8 @@ export interface WeaponInstance {
   radius: number;
   /** Current elemental tint, if any infusion was taken. */
   tint?: number;
+  /** Current elemental status applied on hit, if any infusion was taken. */
+  element?: string;
 }
 
 export type UpgradeKind = 'newWeapon' | 'weaponLevel' | 'passive' | 'heal' | 'evolution';

@@ -218,30 +218,74 @@ export class GameScene extends Phaser.Scene {
   private onProjectileHit(proj: Projectile, enemy: Enemy): void {
     if (!proj.active || !enemy.active) return;
     if (proj.alreadyHit(enemy)) return;
-    this.damageEnemy(enemy, proj.damage, proj.x, proj.y);
+    this.damageEnemy(enemy, proj.damage, proj.x, proj.y, proj.element);
     if (proj.onHit(enemy)) proj.kill();
   }
 
-  /** Single source of truth for hurting an enemy (used by all weapon types). */
-  private damageEnemy(enemy: Enemy, amount: number, fromX?: number, fromY?: number): void {
+  /** Weapon-facing damage entry point (used by all weapon types). */
+  private damageEnemy(enemy: Enemy, amount: number, fromX?: number, fromY?: number, element?: string): void {
+    this.dealDamage(enemy, amount, { fromX, fromY, element });
+  }
+
+  /** Single source of truth for hurting an enemy: crit, curse, popups, element, kill. */
+  private dealDamage(
+    enemy: Enemy,
+    amount: number,
+    opts: { fromX?: number; fromY?: number; element?: string; dot?: boolean; color?: string }
+  ): void {
     if (!enemy.active) return;
-    let dmg = amount;
+    let dmg = amount * enemy.damageTakenMult; // Shadow curse amplifies
     let crit = false;
-    if (this.run.critChance > 0 && Math.random() < this.run.critChance) {
+    if (!opts.dot && this.run.critChance > 0 && Math.random() < this.run.critChance) {
       dmg *= this.run.critMult;
       crit = true;
     }
     dmg = Math.max(1, Math.round(dmg));
-    const dead = enemy.damage(dmg, fromX, fromY);
-    if (this.meta.settings.showDamage) this.popDamage(enemy.x, enemy.y, dmg, crit);
-    AudioSystem.hit();
+    const dead = enemy.damage(dmg, opts.dot ? undefined : opts.fromX, opts.dot ? undefined : opts.fromY);
+    if (this.meta.settings.showDamage) this.popDamage(enemy.x, enemy.y, dmg, crit, opts.color);
+    if (!opts.dot) AudioSystem.hit();
+    if (opts.element && !opts.dot && !dead) this.applyElement(enemy, opts.element, amount);
     if (dead) this.killEnemy(enemy);
   }
 
-  private popDamage(x: number, y: number, amount: number, crit: boolean): void {
+  /** Apply an elemental status on hit. `base` is the pre-crit hit damage. */
+  private applyElement(enemy: Enemy, element: string, base: number): void {
+    switch (element) {
+      case 'frost':
+        enemy.applySlow(0.55, 1300);
+        break;
+      case 'flame':
+        enemy.applyBurn(base * 0.45, 2000);
+        break;
+      case 'venom':
+        enemy.applyPoison(base * 0.3, 4000);
+        break;
+      case 'shadow':
+        enemy.applyVuln(1.3, 3000);
+        break;
+      case 'holy':
+        this.holySmite(enemy, base);
+        break;
+    }
+  }
+
+  /** Radiant infusion: splash damage to enemies near the struck target. */
+  private holySmite(target: Enemy, base: number): void {
+    const r2 = 72 * 72;
+    const dmg = base * 0.4;
+    const children = this.enemies.getChildren() as Enemy[];
+    for (const e of children) {
+      if (!e.active || e === target) continue;
+      if (Phaser.Math.Distance.Squared(target.x, target.y, e.x, e.y) <= r2) {
+        this.dealDamage(e, dmg, { dot: true, color: '#fff0a0' });
+      }
+    }
+  }
+
+  private popDamage(x: number, y: number, amount: number, crit: boolean, color?: string): void {
     const dn = this.damageNumbers.find((d) => !d.active);
     if (!dn) return;
-    dn.spawn(x, y, amount, crit);
+    dn.spawn(x, y, amount, crit, color);
   }
 
   private killEnemy(enemy: Enemy): void {
@@ -483,6 +527,19 @@ export class GameScene extends Phaser.Scene {
     // Regen.
     if (this.run.regenPerSec > 0 && this.run.hp < this.run.maxHp) {
       this.run.hp = Math.min(this.run.maxHp, this.run.hp + this.run.regenPerSec * (delta / 1000));
+    }
+
+    // Damage-over-time (Flame burn / Venom poison), ticked ~4x/sec per enemy.
+    const enemyChildren = this.enemies.getChildren() as Enemy[];
+    for (const e of enemyChildren) {
+      if (!e.active) continue;
+      const burning = time < e.burnUntil;
+      const poisoned = time < e.poisonUntil;
+      if ((burning || poisoned) && time >= e.nextDotTickAt) {
+        e.nextDotTickAt = time + 250;
+        const dps = (burning ? e.burnDps : 0) + (poisoned ? e.poisonDps : 0);
+        if (dps > 0) this.dealDamage(e, dps * 0.25, { dot: true, color: burning ? '#ff8a3a' : '#8aff5a' });
+      }
     }
 
     // Gem magnet pull.

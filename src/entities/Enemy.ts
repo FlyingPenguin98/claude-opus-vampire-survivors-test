@@ -22,7 +22,20 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   /** Target the enemy chases; set by the spawner. */
   target?: Phaser.Math.Vector2;
 
+  // Status effects (driven by elemental infusions; DoT ticked by GameScene).
+  slowUntil = 0;
+  slowFactor = 1;
+  burnUntil = 0;
+  burnDps = 0;
+  poisonUntil = 0;
+  poisonDps = 0;
+  vulnUntil = 0;
+  vulnMult = 1;
+  nextDotTickAt = 0;
+
   private flashUntil = 0;
+  private curSpeed = 0;
+  private statusTinted = false;
   private knockbackUntil = 0;
   private knockbackResist = 0;
   private speedMult = 1;
@@ -65,6 +78,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.nextHitAt = 0;
     this.nextBladeHitAt = 0;
     this.knockbackUntil = 0;
+    this.slowUntil = 0;
+    this.slowFactor = 1;
+    this.burnUntil = 0;
+    this.burnDps = 0;
+    this.poisonUntil = 0;
+    this.poisonDps = 0;
+    this.vulnUntil = 0;
+    this.vulnMult = 1;
+    this.nextDotTickAt = 0;
+    this.statusTinted = false;
     this.chargeState = 'idle';
     const now = this.scene.time.now;
     this.nextChargeAt = now + (def.chargeIntervalMs ?? 0);
@@ -104,6 +127,41 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     return this.hp <= 0;
   }
 
+  /** Multiplier on incoming damage (Shadow curse makes foes take more). */
+  get damageTakenMult(): number {
+    return this.scene.time.now < this.vulnUntil ? this.vulnMult : 1;
+  }
+
+  applySlow(factor: number, durMs: number): void {
+    this.slowFactor = factor;
+    this.slowUntil = this.scene.time.now + durMs;
+  }
+
+  applyBurn(dps: number, durMs: number): void {
+    const now = this.scene.time.now;
+    this.burnDps = now < this.burnUntil ? Math.max(this.burnDps, dps) : dps;
+    this.burnUntil = now + durMs;
+  }
+
+  applyPoison(dps: number, durMs: number): void {
+    const now = this.scene.time.now;
+    this.poisonDps = now < this.poisonUntil ? Math.max(this.poisonDps, dps) : dps;
+    this.poisonUntil = now + durMs;
+  }
+
+  applyVuln(mult: number, durMs: number): void {
+    this.vulnMult = mult;
+    this.vulnUntil = this.scene.time.now + durMs;
+  }
+
+  private statusTint(time: number): number | undefined {
+    if (time < this.burnUntil) return 0xff8a3a;
+    if (time < this.poisonUntil) return 0x8aff5a;
+    if (time < this.slowUntil) return 0x9fd8ff;
+    if (time < this.vulnUntil) return 0xc08aff;
+    return undefined;
+  }
+
   preUpdate(time: number, delta: number): void {
     super.preUpdate(time, delta);
 
@@ -113,6 +171,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     if (!this.target) return;
+
+    // Current speed, reduced while chilled by Frost.
+    this.curSpeed = time < this.slowUntil ? this.speed * this.slowFactor : this.speed;
 
     // Riding out a knockback impulse: don't override velocity.
     if (time < this.knockbackUntil) {
@@ -134,11 +195,24 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.updateShooter();
         break;
       default:
-        this.steer(this.speed);
+        this.steer(this.curSpeed);
         break;
     }
 
     this.setFlipX(this.target!.x < this.x);
+
+    // Status colour feedback (don't fight the hit-flash or a charge telegraph).
+    const charging = this.def.behavior === 'charger' && this.chargeState !== 'idle';
+    if (!this.flashUntil && !charging) {
+      const t = this.statusTint(time);
+      if (t !== undefined) {
+        this.setTint(t);
+        this.statusTinted = true;
+      } else if (this.statusTinted) {
+        this.clearTint();
+        this.statusTinted = false;
+      }
+    }
   }
 
   private steer(speed: number): void {
@@ -172,7 +246,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       return;
     }
     // idle: chase normally, then wind up when it's time.
-    this.steer(this.speed);
+    this.steer(this.curSpeed);
     if (time >= this.nextChargeAt) {
       this.chargeState = 'telegraph';
       this.stateUntil = time + 420;
@@ -183,9 +257,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const standoff = this.def.standoff ?? 220;
     const dist = Phaser.Math.Distance.Between(this.x, this.y, this.target!.x, this.target!.y);
     if (dist > standoff * 1.15) {
-      this.steer(this.speed);
+      this.steer(this.curSpeed);
     } else if (dist < standoff * 0.8) {
-      this.steer(-this.speed * 0.8); // back away
+      this.steer(-this.curSpeed * 0.8); // back away
     } else {
       this.setVelocity(0, 0);
     }
