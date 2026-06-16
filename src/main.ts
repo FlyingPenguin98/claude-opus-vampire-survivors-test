@@ -19,6 +19,9 @@ const config: Phaser.Types.Core.GameConfig = {
   // Crisp nearest-neighbor scaling for the 16-bit pixel-art look.
   pixelArt: true,
   roundPixels: true,
+  // Allow multiple simultaneous touch points so mobile players can move with the
+  // joystick and tap dash/pause at the same time (default is a single pointer).
+  input: { activePointers: 3 },
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
