@@ -140,7 +140,31 @@ export class UIScene extends Phaser.Scene {
       })
       .setOrigin(0, 0);
 
+    // Touch-only on-screen controls (movement is the on-screen joystick in GameScene).
+    if (this.game.device.input.touch) this.createTouchButtons(width, height);
+
     this.bindEvents();
+  }
+
+  private createTouchButtons(width: number, height: number): void {
+    const mkButton = (x: number, y: number, r: number, label: string, fontSize: string, onTap: () => void) => {
+      const circle = this.add.circle(x, y, r, 0x1a1726, 0.6).setStrokeStyle(2, 0x6ad8ff, 0.8);
+      this.add
+        .text(x, y, label, { fontFamily: 'Georgia, serif', fontSize, color: '#cfd6e6' })
+        .setOrigin(0.5);
+      circle.setInteractive({ useHandCursor: true });
+      circle.on('pointerdown', (_p: Phaser.Input.Pointer, _lx: number, _ly: number, e: Phaser.Types.Input.EventData) => {
+        e?.stopPropagation?.();
+        onTap();
+      });
+    };
+
+    // Dash (bottom-right).
+    mkButton(width - 54, height - 54, 38, '⚡', '26px', () => {
+      if (!this.gameScene.scene.isPaused()) this.gameScene.player?.tryDash();
+    });
+    // Pause (top-right, below the gold/kills readouts).
+    mkButton(width - 30, 92, 22, '❚❚', '16px', () => this.gameScene.requestPause());
   }
 
   /** Rebuild the compact weapon/passive icon row from a loadout snapshot. */

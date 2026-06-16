@@ -126,6 +126,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
     id: 'boomerang', name: 'Boomerang', type: 'boomerang', textureKey: 'boomerang',
     description: 'A blade that flies out and curves back, hitting twice.',
     maxLevel: 6, damage: 11, cooldownMs: 1100, projectileSpeed: 380, pierce: 99, count: 1,
+    evolvesInto: 'boomerang-evo', requiresPassive: 'passive-crit',
     mods: [dmg(), dmgBig(), cd(), cdBig(), count(), speed(), elFlame(), elFrost()],
   },
   chain: {
@@ -139,6 +140,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
     id: 'nova', name: 'Shockwave', type: 'nova', textureKey: 'icon-nova',
     description: 'A ring of force that pulses out, knocking enemies back.',
     maxLevel: 6, damage: 14, cooldownMs: 1600, radius: 140,
+    evolvesInto: 'nova-evo', requiresPassive: 'passive-titan',
     mods: [dmg(), dmgBig(), cd(), cdBig(), area(), areaBig(), elFrost(), elFlame()],
   },
   storm: {
@@ -166,6 +168,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
     id: 'companion', name: 'Spirit Familiar', type: 'companion', textureKey: 'icon-pet',
     description: 'A familiar that orbits you and fires at foes.',
     maxLevel: 6, damage: 8, cooldownMs: 900, projectileSpeed: 420, count: 1, pierce: 0,
+    evolvesInto: 'companion-evo', requiresPassive: 'passive-growth',
     mods: [dmg(), dmgBig(), cd(), cdBig(), summonMod(), speed(), elVenom(), elHoly()],
   },
   singularity: {
@@ -236,6 +239,24 @@ export const WEAPONS: Record<string, WeaponDef> = {
     description: 'A colossal black hole no enemy can escape.',
     maxLevel: 1, damage: 14, cooldownMs: 2600, radius: 185, durationMs: 3600, pullForce: 360,
     evolvedFrom: 'singularity', mods: [],
+  },
+  'boomerang-evo': {
+    id: 'boomerang-evo', name: 'Glaive Storm', type: 'boomerang', textureKey: 'boomerang',
+    description: 'A fan of returning glaives that shred the field.',
+    maxLevel: 1, damage: 22, cooldownMs: 800, projectileSpeed: 440, pierce: 99, count: 3,
+    evolvedFrom: 'boomerang', mods: [],
+  },
+  'nova-evo': {
+    id: 'nova-evo', name: 'Supernova', type: 'nova', textureKey: 'icon-nova',
+    description: 'A massive blast wave that hurls the horde away.',
+    maxLevel: 1, damage: 30, cooldownMs: 1100, radius: 220,
+    evolvedFrom: 'nova', mods: [],
+  },
+  'companion-evo': {
+    id: 'companion-evo', name: 'Archon', type: 'companion', textureKey: 'icon-pet',
+    description: 'Three radiant familiars unleash a barrage.',
+    maxLevel: 1, damage: 16, cooldownMs: 650, projectileSpeed: 480, count: 3, pierce: 1,
+    evolvedFrom: 'companion', mods: [],
   },
 };
 

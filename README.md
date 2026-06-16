@@ -41,6 +41,8 @@ npm run preview  # serve the production build locally
 - **Move:** `WASD` or arrow keys
 - **Dash:** `Shift` or `Space` — a quick dodge with brief invulnerability (short cooldown,
   shown by the HUD pip). Use it to punch out of a surround.
+- **Touch / mobile:** drag the **left half of the screen** for a virtual movement joystick,
+  and use the on-screen **⚡ dash** (bottom-right) and **❚❚ pause** (top-right) buttons.
 - **Attack:** automatic — weapons fire on their own
 - **Level up:** collect XP gems dropped by enemies; on level-up, pick **1 of 3** upgrades
   with the mouse or keys `1` / `2` / `3`
@@ -55,7 +57,7 @@ npm run preview  # serve the production build locally
   starting weapon and stat profile. Most are unlocked via achievements.
 - **3 selectable stages** (Moonlit Meadow, Forgotten Crypt, Ashen Wastes) with their own
   palettes, enemy mixes, boss timelines, and a survive-to-dawn victory.
-- **20 weapons + 5 evolutions** spanning many firing styles — the classic projectile/aura/orbit
+- **20 weapons + 13 evolutions** spanning many firing styles — the classic projectile/aura/orbit
   trio (Arcane Bolt, Fireball, Knives, Frost Aura, Orbit Blades, …) plus eight all-new behaviors:
   **Boomerang** (flies out and back), **Chain Lightning** (arcs between foes), **Shockwave**
   (knockback ring), **Meteor Storm** (AoE strikes from above), **Death Ray** (tracking beam),

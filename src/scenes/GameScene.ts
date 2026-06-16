@@ -71,6 +71,14 @@ export class GameScene extends Phaser.Scene {
   /** Current boss enemy, exposed so the UI can render its health bar. */
   boss?: Enemy;
 
+  // Virtual joystick (touch movement).
+  private joyActive = false;
+  private joyId = -1;
+  private joyVec = new Phaser.Math.Vector2();
+  private joyBase?: Phaser.GameObjects.Arc;
+  private joyThumb?: Phaser.GameObjects.Arc;
+  private readonly joyMax = 55;
+
   constructor() {
     super('GameScene');
   }
@@ -89,6 +97,9 @@ export class GameScene extends Phaser.Scene {
     this.damageNumbers = [];
     this.boss = undefined;
     this.timerEmitAccum = 0;
+    this.joyActive = false;
+    this.joyId = -1;
+    this.joyVec.set(0, 0);
 
     AudioSystem.configure(this.meta.settings);
     AudioSystem.unlock();
@@ -115,7 +126,9 @@ export class GameScene extends Phaser.Scene {
     // Player at the center of the world.
     const cx = GAME.worldWidth / 2;
     const cy = GAME.worldHeight / 2;
-    this.player = new Player(this, cx, cy, this.run, this.character.spriteKey);
+    this.player = new Player(this, cx, cy, this.run, this.character.spriteKey, () =>
+      this.joyActive ? this.joyVec : null
+    );
     this.playerPos.set(cx, cy);
 
     this.cameras.main.setBounds(0, 0, GAME.worldWidth, GAME.worldHeight);
@@ -166,6 +179,8 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-ESC', this.togglePause, this);
     this.input.keyboard?.on('keydown-P', this.togglePause, this);
 
+    this.setupJoystick();
+
     this.scene.launch('UIScene');
     this.time.delayedCall(0, () => this.emitFullState());
   }
@@ -197,6 +212,68 @@ export class GameScene extends Phaser.Scene {
     if (this.gameOver || this.processingReward || this.scene.isPaused()) return;
     this.scene.pause();
     this.scene.launch('PauseScene', { gameScene: this });
+  }
+
+  /** Public entry point for the on-screen (touch) pause button. */
+  requestPause(): void {
+    this.togglePause();
+  }
+
+  // --- Virtual joystick (touch movement, left half of the screen) ---
+
+  private setupJoystick(): void {
+    this.joyBase = this.add
+      .circle(0, 0, this.joyMax, 0xffffff, 0.12)
+      .setStrokeStyle(3, 0xffffff, 0.35)
+      .setScrollFactor(0)
+      .setDepth(900)
+      .setVisible(false);
+    this.joyThumb = this.add
+      .circle(0, 0, 26, 0xffffff, 0.3)
+      .setScrollFactor(0)
+      .setDepth(901)
+      .setVisible(false);
+
+    this.input.on('pointerdown', this.onJoyDown, this);
+    this.input.on('pointermove', this.onJoyMove, this);
+    this.input.on('pointerup', this.onJoyUp, this);
+    this.input.on('pointerupoutside', this.onJoyUp, this);
+  }
+
+  private onJoyDown(pointer: Phaser.Input.Pointer): void {
+    if (this.gameOver || this.scene.isPaused() || this.joyActive) return;
+    if (!pointer.wasTouch) return; // mouse/desktop unaffected
+    if (pointer.x > this.scale.width * 0.55) return; // right side reserved for buttons
+    this.joyActive = true;
+    this.joyId = pointer.id;
+    this.joyVec.set(0, 0);
+    this.joyBase?.setPosition(pointer.x, pointer.y).setVisible(true);
+    this.joyThumb?.setPosition(pointer.x, pointer.y).setVisible(true);
+  }
+
+  private onJoyMove(pointer: Phaser.Input.Pointer): void {
+    if (!this.joyActive || pointer.id !== this.joyId || !this.joyBase) return;
+    const dx = pointer.x - this.joyBase.x;
+    const dy = pointer.y - this.joyBase.y;
+    const len = Math.hypot(dx, dy);
+    const ang = Math.atan2(dy, dx);
+    const clamped = Math.min(len, this.joyMax);
+    this.joyThumb?.setPosition(this.joyBase.x + Math.cos(ang) * clamped, this.joyBase.y + Math.sin(ang) * clamped);
+    if (len > 8) {
+      const mag = Math.min(1, len / this.joyMax);
+      this.joyVec.set(Math.cos(ang) * mag, Math.sin(ang) * mag);
+    } else {
+      this.joyVec.set(0, 0);
+    }
+  }
+
+  private onJoyUp(pointer: Phaser.Input.Pointer): void {
+    if (pointer.id !== this.joyId) return;
+    this.joyActive = false;
+    this.joyId = -1;
+    this.joyVec.set(0, 0);
+    this.joyBase?.setVisible(false);
+    this.joyThumb?.setVisible(false);
   }
 
   /** Snapshot of weapons + passives for the loadout UI / pause screen. */

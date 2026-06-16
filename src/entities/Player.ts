@@ -24,13 +24,23 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private run: RunState;
   /** Animation key prefix for this character's sprite. */
   private spriteKey: string;
+  /** Optional analog move vector from a touch joystick (components in -1..1). */
+  private getTouch?: () => { x: number; y: number } | null;
   /** A soft shadow drawn under the player for grounding. */
   private shadow: Phaser.GameObjects.Image;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, run: RunState, spriteKey = 'player') {
+  constructor(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    run: RunState,
+    spriteKey = 'player',
+    getTouch?: () => { x: number; y: number } | null
+  ) {
     super(scene, x, y, spriteKey);
     this.run = run;
     this.spriteKey = spriteKey;
+    this.getTouch = getTouch;
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
@@ -93,6 +103,21 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return true;
   }
 
+  /** Trigger a dash in `dir` (falls back to last facing). Called by keys or touch. */
+  tryDash(dir?: Phaser.Math.Vector2): void {
+    const time = this.scene.time.now;
+    if (time < this.dashCdUntil) return;
+    const d = (dir && dir.lengthSq() > 0 ? dir.clone().normalize() : this.facing.clone()).scale(PLAYER.dashSpeed);
+    this.setVelocity(d.x, d.y);
+    this.dashUntil = time + PLAYER.dashDurationMs;
+    this.dashCdUntil = time + PLAYER.dashCooldownMs;
+    this.invulnUntil = Math.max(this.invulnUntil, time + PLAYER.dashInvulnMs);
+    if (d.x < 0) this.setFlipX(true);
+    else if (d.x > 0) this.setFlipX(false);
+    this.scene.tweens.add({ targets: this, alpha: 0.4, yoyo: true, duration: PLAYER.dashDurationMs / 2, onComplete: () => this.setAlpha(1) });
+    AudioSystem.dash();
+  }
+
   preUpdate(time: number, delta: number): void {
     super.preUpdate(time, delta);
 
@@ -101,25 +126,23 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const up = this.keys.up.isDown || this.cursors.up.isDown;
     const down = this.keys.down.isDown || this.cursors.down.isDown;
 
-    const dir = new Phaser.Math.Vector2(
+    const move = new Phaser.Math.Vector2(
       (right ? 1 : 0) - (left ? 1 : 0),
       (down ? 1 : 0) - (up ? 1 : 0)
     );
-    if (dir.lengthSq() > 0) this.facing.copy(dir).normalize();
-
-    // Dash trigger (Shift / Space) — burst in move dir (or facing) with i-frames.
-    const dashPressed = this.dashKeys.some((k) => Phaser.Input.Keyboard.JustDown(k));
-    if (dashPressed && time >= this.dashCdUntil) {
-      const d = (dir.lengthSq() > 0 ? dir.clone().normalize() : this.facing.clone()).scale(PLAYER.dashSpeed);
-      this.setVelocity(d.x, d.y);
-      this.dashUntil = time + PLAYER.dashDurationMs;
-      this.dashCdUntil = time + PLAYER.dashCooldownMs;
-      this.invulnUntil = Math.max(this.invulnUntil, time + PLAYER.dashInvulnMs);
-      if (d.x < 0) this.setFlipX(true);
-      else if (d.x > 0) this.setFlipX(false);
-      this.scene.tweens.add({ targets: this, alpha: 0.4, yoyo: true, duration: PLAYER.dashDurationMs / 2, onComplete: () => this.setAlpha(1) });
-      AudioSystem.dash();
+    // Fall back to the touch joystick when there's no keyboard input.
+    let usingTouch = false;
+    if (move.lengthSq() === 0 && this.getTouch) {
+      const t = this.getTouch();
+      if (t && (t.x !== 0 || t.y !== 0)) {
+        move.set(t.x, t.y);
+        usingTouch = true;
+      }
     }
+    if (move.lengthSq() > 0) this.facing.copy(move).normalize();
+
+    // Keyboard dash (Shift / Space). Touch dash is triggered via tryDash() externally.
+    if (this.dashKeys.some((k) => Phaser.Input.Keyboard.JustDown(k))) this.tryDash(move);
 
     // While dashing, keep the burst velocity and skip normal movement.
     if (time < this.dashUntil) {
@@ -128,11 +151,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     const speed = PLAYER.speed * this.run.moveSpeedMult;
-    if (dir.lengthSq() > 0) {
-      dir.normalize().scale(speed);
-      this.setVelocity(dir.x, dir.y);
-      if (left) this.setFlipX(true);
-      else if (right) this.setFlipX(false);
+    if (move.lengthSq() > 0) {
+      if (!usingTouch || move.length() > 1) move.normalize();
+      move.scale(speed);
+      this.setVelocity(move.x, move.y);
+      if (move.x < -1) this.setFlipX(true);
+      else if (move.x > 1) this.setFlipX(false);
       const walk = `${this.spriteKey}-walk`;
       if (this.anims.currentAnim?.key !== walk) this.play(walk);
     } else {
