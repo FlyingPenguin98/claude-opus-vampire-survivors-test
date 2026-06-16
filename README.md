@@ -36,8 +36,11 @@ npm run preview  # serve the production build locally
 
 ## How to play
 
-- **Prepare:** from the title, choose **Begin** → pick a **hero** and a **stage**.
+- **Prepare:** from the title, choose **Begin** → pick a **hero**, a **stage**, and a
+  **difficulty** (Easy / Normal / Hard).
 - **Move:** `WASD` or arrow keys
+- **Dash:** `Shift` or `Space` — a quick dodge with brief invulnerability (short cooldown,
+  shown by the HUD pip). Use it to punch out of a surround.
 - **Attack:** automatic — weapons fire on their own
 - **Level up:** collect XP gems dropped by enemies; on level-up, pick **1 of 3** upgrades
   with the mouse or keys `1` / `2` / `3`
@@ -52,9 +55,13 @@ npm run preview  # serve the production build locally
   starting weapon and stat profile. Most are unlocked via achievements.
 - **3 selectable stages** (Moonlit Meadow, Forgotten Crypt, Ashen Wastes) with their own
   palettes, enemy mixes, boss timelines, and a survive-to-dawn victory.
-- **12 weapons + 5 evolutions** across projectile, aura, and orbit archetypes
-  (Arcane Bolt, Holy Spark, Fireball, Throwing Knives, Shadow Orb, Chain Bolt, Frost Aura,
-  Sacred Flame, Venom Cloud, Orbit Blades, Spirit Tomes, Whirling Saw, …).
+- **20 weapons + 5 evolutions** spanning many firing styles — the classic projectile/aura/orbit
+  trio (Arcane Bolt, Fireball, Knives, Frost Aura, Orbit Blades, …) plus eight all-new behaviors:
+  **Boomerang** (flies out and back), **Chain Lightning** (arcs between foes), **Shockwave**
+  (knockback ring), **Meteor Storm** (AoE strikes from above), **Death Ray** (tracking beam),
+  **Sentry Turret** (deployed auto-cannon), **Spirit Familiar** (a roaming ally), and
+  **Singularity** (a black hole that pulls enemies in).
+- **Difficulty modes** (Easy / Normal / Hard) scale enemy HP, damage, and spawn rate.
 - **15 stacking passives** (damage, crit, area, cooldown, armor, regen, luck, XP, and more).
 - **10 enemy types with real behaviors** — chargers that dash, splitters that burst into
   spawn, ranged shooters that fire back — plus **3 bosses** with barrage/charge patterns.

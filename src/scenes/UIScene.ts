@@ -27,6 +27,9 @@ export class UIScene extends Phaser.Scene {
 
   private loadoutContainer!: Phaser.GameObjects.Container;
 
+  private dashLabel!: Phaser.GameObjects.Text;
+  private dashBar!: Phaser.GameObjects.Rectangle;
+
   constructor() {
     super('UIScene');
   }
@@ -117,9 +120,20 @@ export class UIScene extends Phaser.Scene {
     // --- Loadout bar (weapon + passive icons), refreshed on change ---
     this.loadoutContainer = this.add.container(pad, 78);
 
+    // Dash cooldown pip.
+    this.dashLabel = this.add
+      .text(pad, height - 46, '⚡ DASH', {
+        fontFamily: 'Courier New, monospace',
+        fontSize: '12px',
+        color: '#6ad8ff',
+      })
+      .setOrigin(0, 0.5);
+    this.add.rectangle(pad + 66, height - 46, 60, 8, 0x1a1726).setOrigin(0, 0.5).setStrokeStyle(1, 0x3f6fc0);
+    this.dashBar = this.add.rectangle(pad + 67, height - 46, 58, 6, 0x6ad8ff).setOrigin(0, 0.5);
+
     // Pause hint.
     this.add
-      .text(pad, height - 22, 'Esc / P: Pause', {
+      .text(pad, height - 22, 'Esc / P: Pause  •  Shift/Space: Dash', {
         fontFamily: 'Courier New, monospace',
         fontSize: '12px',
         color: '#6a7088',
@@ -212,6 +226,15 @@ export class UIScene extends Phaser.Scene {
     if (boss && boss.active && this.bossContainer.visible) {
       const frac = Phaser.Math.Clamp(boss.hp / boss.maxHp, 0, 1);
       this.bossBar.width = (this.bossBarWidth - 4) * frac;
+    }
+
+    // Dash cooldown pip.
+    const player = this.gameScene.player;
+    if (player) {
+      const ready = 1 - player.dashCooldownProgress;
+      this.dashBar.width = 58 * ready;
+      this.dashBar.fillColor = ready >= 1 ? 0x6ad8ff : 0x3a5a7a;
+      this.dashLabel.setColor(ready >= 1 ? '#6ad8ff' : '#6a7088');
     }
   }
 }

@@ -36,10 +36,12 @@ export class RunState {
   critMult = 2;
   /** Multiplier on XP gained from gems. */
   xpMult = 1;
-  /** HP regenerated per second. */
-  regenPerSec = 0;
+  /** HP regenerated per second (small base value gives early-game breathing room). */
+  regenPerSec = 0.4;
   /** Extra multiplier on gold/chest drop chances. */
   luck = 1;
+  /** Multiplier on gold gained (difficulty modes adjust this). */
+  goldMult = 1;
   /** Number of times the player can cheat death this run. */
   revives = 0;
 

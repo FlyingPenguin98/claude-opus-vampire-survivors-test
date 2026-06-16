@@ -28,6 +28,11 @@ const elVenom = (): WeaponMod => ({ id: 'el-venom', text: 'Venom infusion — li
 const elShadow = (): WeaponMod => ({ id: 'el-shadow', text: 'Shadow infusion — curses foes to take +30% damage', dmgMul: 1.1, tint: 0xc08aff, element: 'shadow' });
 const elHoly = (): WeaponMod => ({ id: 'el-holy', text: 'Radiant infusion — smites nearby foes on hit', dmgMul: 1.1, tint: 0xfff0a0, element: 'holy' });
 
+// Type-specific scalars (read as inst.count by their handlers).
+const jumpMod = (): WeaponMod => ({ id: 'jump', text: '+1 chain jump', addCount: 1, repeatable: true, weight: 1.2 });
+const summonMod = (): WeaponMod => ({ id: 'summon', text: '+1 summon', addCount: 1, weight: 1.1 });
+const strikeMod = (): WeaponMod => ({ id: 'strike', text: '+1 strike', addCount: 1, repeatable: true, weight: 1.1 });
+
 const projPool = (...extra: WeaponMod[]): WeaponMod[] => [dmg(), dmgBig(), cd(), cdBig(), count(), pierce(), speed(), ...extra];
 const auraPool = (...extra: WeaponMod[]): WeaponMod[] => [dmg(), dmgBig(), cd(), cdBig(), area(), areaBig(), ...extra];
 const orbitPool = (...extra: WeaponMod[]): WeaponMod[] => [dmg(), dmgBig(), orbCount(), area(), areaBig(), speed(), ...extra];
@@ -114,6 +119,56 @@ export const WEAPONS: Record<string, WeaponDef> = {
     description: 'A heavy saw grinds in a tight orbit.',
     maxLevel: 6, damage: 16, cooldownMs: 9999, radius: 55, count: 1,
     mods: orbitPool(elVenom(), elFlame()),
+  },
+
+  // --- New behaviors (beyond the original three archetypes) ---
+  boomerang: {
+    id: 'boomerang', name: 'Boomerang', type: 'boomerang', textureKey: 'boomerang',
+    description: 'A blade that flies out and curves back, hitting twice.',
+    maxLevel: 6, damage: 11, cooldownMs: 1100, projectileSpeed: 380, pierce: 99, count: 1,
+    mods: [dmg(), dmgBig(), cd(), cdBig(), count(), speed(), elFlame(), elFrost()],
+  },
+  chain: {
+    id: 'chain', name: 'Chain Lightning', type: 'chain', textureKey: 'icon-chain',
+    description: 'A bolt that arcs between nearby enemies.',
+    maxLevel: 6, damage: 10, cooldownMs: 950, count: 3, jumpRange: 200,
+    mods: [dmg(), dmgBig(), cd(), cdBig(), jumpMod(), jumpMod(), elFrost(), elShadow()],
+  },
+  nova: {
+    id: 'nova', name: 'Shockwave', type: 'nova', textureKey: 'icon-nova',
+    description: 'A ring of force that pulses out, knocking enemies back.',
+    maxLevel: 6, damage: 14, cooldownMs: 1600, radius: 140,
+    mods: [dmg(), dmgBig(), cd(), cdBig(), area(), areaBig(), elFrost(), elFlame()],
+  },
+  storm: {
+    id: 'storm', name: 'Meteor Storm', type: 'storm', textureKey: 'icon-storm',
+    description: 'Calls down meteors at random points around you.',
+    maxLevel: 6, damage: 24, cooldownMs: 2200, radius: 64, count: 3,
+    mods: [dmg(), dmgBig(), area(), areaBig(), strikeMod(), cd(), elFlame(), elShadow()],
+  },
+  beam: {
+    id: 'beam', name: 'Death Ray', type: 'beam', textureKey: 'icon-beam',
+    description: 'A continuous beam that tracks the nearest foe.',
+    maxLevel: 6, damage: 4, cooldownMs: 120, beamLength: 280, beamWidth: 34, radius: 1,
+    mods: [dmg(), dmgBig(), cd(), elFrost(), elShadow(), elHoly(), area()],
+  },
+  turret: {
+    id: 'turret', name: 'Sentry Turret', type: 'turret', textureKey: 'icon-turret',
+    description: 'Deploys a turret that auto-fires for a while.',
+    maxLevel: 6, damage: 9, cooldownMs: 4000, count: 1, durationMs: 8000, pierce: 1,
+    mods: [dmg(), dmgBig(), cd(), summonMod(), summonMod(), elFlame(), elShadow()],
+  },
+  companion: {
+    id: 'companion', name: 'Spirit Familiar', type: 'companion', textureKey: 'icon-pet',
+    description: 'A familiar that orbits you and fires at foes.',
+    maxLevel: 6, damage: 8, cooldownMs: 900, projectileSpeed: 420, count: 1, pierce: 0,
+    mods: [dmg(), dmgBig(), cd(), cdBig(), summonMod(), speed(), elVenom(), elHoly()],
+  },
+  singularity: {
+    id: 'singularity', name: 'Singularity', type: 'singularity', textureKey: 'icon-singularity',
+    description: 'A black hole that drags enemies in and grinds them.',
+    maxLevel: 6, damage: 7, cooldownMs: 3200, radius: 120, durationMs: 2600, pullForce: 240,
+    mods: [dmg(), dmgBig(), area(), areaBig(), cd(), elVenom(), elFrost()],
   },
 
   // --- Evolutions (granted via chest; never offered directly, never leveled) ---

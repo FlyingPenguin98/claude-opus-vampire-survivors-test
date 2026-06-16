@@ -1,10 +1,12 @@
 import Phaser from 'phaser';
 import { GAME, PLAYER } from '../config/GameConfig';
+import { AudioSystem } from '../systems/AudioSystem';
 import type { RunState } from '../state/RunState';
 
 /**
- * The player avatar. Handles WASD movement, walk/idle animation, facing flip, and
- * post-hit invulnerability frames. Combat damage is applied externally by GameScene.
+ * The player avatar. Handles WASD movement, an active dash/dodge (Shift/Space) with
+ * brief i-frames, walk/idle animation, facing flip, and post-hit invulnerability.
+ * Combat damage is applied externally by GameScene.
  */
 export class Player extends Phaser.Physics.Arcade.Sprite {
   private keys: {
@@ -13,8 +15,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     left: Phaser.Input.Keyboard.Key;
     right: Phaser.Input.Keyboard.Key;
   };
+  private dashKeys: Phaser.Input.Keyboard.Key[] = [];
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
   private invulnUntil = 0;
+  private dashUntil = 0;
+  private dashCdUntil = 0;
+  private facing = new Phaser.Math.Vector2(1, 0);
   private run: RunState;
   /** Animation key prefix for this character's sprite. */
   private spriteKey: string;
@@ -53,12 +59,23 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       left: kb.addKey(Phaser.Input.Keyboard.KeyCodes.A),
       right: kb.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
+    this.dashKeys = [
+      kb.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT),
+      kb.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
+    ];
 
     this.play(`${this.spriteKey}-idle`);
   }
 
   get isInvulnerable(): boolean {
     return this.scene.time.now < this.invulnUntil;
+  }
+
+  /** 0 = dash ready, 1 = just used (for the HUD pip). */
+  get dashCooldownProgress(): number {
+    const now = this.scene.time.now;
+    if (now >= this.dashCdUntil) return 0;
+    return (this.dashCdUntil - now) / PLAYER.dashCooldownMs;
   }
 
   /** Begin i-frames and a blink flash. Returns false if currently invulnerable. */
@@ -88,6 +105,27 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       (right ? 1 : 0) - (left ? 1 : 0),
       (down ? 1 : 0) - (up ? 1 : 0)
     );
+    if (dir.lengthSq() > 0) this.facing.copy(dir).normalize();
+
+    // Dash trigger (Shift / Space) — burst in move dir (or facing) with i-frames.
+    const dashPressed = this.dashKeys.some((k) => Phaser.Input.Keyboard.JustDown(k));
+    if (dashPressed && time >= this.dashCdUntil) {
+      const d = (dir.lengthSq() > 0 ? dir.clone().normalize() : this.facing.clone()).scale(PLAYER.dashSpeed);
+      this.setVelocity(d.x, d.y);
+      this.dashUntil = time + PLAYER.dashDurationMs;
+      this.dashCdUntil = time + PLAYER.dashCooldownMs;
+      this.invulnUntil = Math.max(this.invulnUntil, time + PLAYER.dashInvulnMs);
+      if (d.x < 0) this.setFlipX(true);
+      else if (d.x > 0) this.setFlipX(false);
+      this.scene.tweens.add({ targets: this, alpha: 0.4, yoyo: true, duration: PLAYER.dashDurationMs / 2, onComplete: () => this.setAlpha(1) });
+      AudioSystem.dash();
+    }
+
+    // While dashing, keep the burst velocity and skip normal movement.
+    if (time < this.dashUntil) {
+      this.shadow.setPosition(this.x, this.y + 5 * GAME.spriteScale);
+      return;
+    }
 
     const speed = PLAYER.speed * this.run.moveSpeedMult;
     if (dir.lengthSq() > 0) {

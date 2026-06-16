@@ -149,6 +149,11 @@ class Audio {
     this.blip(880, 0.08, 'square', this.sfxGain, 0.14, 1180);
   }
 
+  dash(): void {
+    this.blip(520, 0.12, 'sawtooth', this.sfxGain, 0.1, 1100);
+    this.noise(0.1, 0.06, 1600);
+  }
+
   // --- Music: a slow minor arpeggio loop. ---
 
   private startMusic(): void {

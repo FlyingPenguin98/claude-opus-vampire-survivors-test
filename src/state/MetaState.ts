@@ -15,6 +15,8 @@ export interface MetaSettings {
   sfx: number;
   muted: boolean;
   showDamage: boolean;
+  /** Last-selected difficulty id, remembered on the prepare screen. */
+  lastDifficulty?: string;
 }
 
 export interface MetaData {
@@ -40,7 +42,7 @@ function defaults(): MetaData {
     powerups: {},
     unlocked: [],
     achievements: [],
-    settings: { master: 0.7, music: 0.45, sfx: 0.7, muted: false, showDamage: true },
+    settings: { master: 0.7, music: 0.45, sfx: 0.7, muted: false, showDamage: true, lastDifficulty: 'normal' },
     bestPerStage: {},
   };
 }

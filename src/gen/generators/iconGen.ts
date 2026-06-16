@@ -76,4 +76,95 @@ export function generateIcons(scene: Phaser.Scene): void {
   vn.px(7, 9, VOUT); // little hollow
   vn.outline(VOUT);
   vn.commit(scene);
+
+  // Chain Lightning: a blocky yellow bolt.
+  const ch = new PixelCanvas(scene, 'icon-chain', 16, 16, 1);
+  const Y = '#ffe23a';
+  const YH = '#fff7c0';
+  ch.rect(8, 2, 3, 3, Y);
+  ch.rect(6, 5, 3, 3, Y);
+  ch.rect(8, 7, 3, 3, Y);
+  ch.rect(5, 9, 3, 4, Y);
+  ch.px(9, 3, YH);
+  ch.px(7, 6, YH);
+  ch.px(6, 10, YH);
+  ch.outline('#5a3a07');
+  ch.commit(scene);
+
+  // Beam: a bright ray with an emitter.
+  const be = new PixelCanvas(scene, 'icon-beam', 16, 16, 1);
+  be.rect(2, 7, 11, 2, '#9ff0ff');
+  be.rect(2, 7, 11, 1, '#ffffff');
+  be.rect(11, 5, 3, 6, '#cfd6e6');
+  be.px(14, 7, '#ffffff');
+  be.px(14, 8, '#ffffff');
+  be.outline('#1f6fb0');
+  be.commit(scene);
+
+  // Nova: concentric cyan rings.
+  const nv = new PixelCanvas(scene, 'icon-nova', 16, 16, 1);
+  ringPixels(nv, 8, 8, 6, '#6ad8ff');
+  ringPixels(nv, 8, 8, 3, '#bfe8ff');
+  nv.px(8, 8, '#ffffff');
+  nv.outline('#0b2b4a');
+  nv.commit(scene);
+
+  // Singularity: a dark core with a violet rim.
+  const sg = new PixelCanvas(scene, 'icon-singularity', 16, 16, 1);
+  diskPixels(sg, 8, 8, 6, '#c060ff');
+  diskPixels(sg, 8, 8, 4, '#2a0a3a');
+  sg.px(10, 6, '#e6b0ff');
+  sg.outline('#1a0026');
+  sg.commit(scene);
+
+  // Turret: a little cannon.
+  const tu = new PixelCanvas(scene, 'icon-turret', 16, 16, 1);
+  tu.rect(4, 10, 8, 4, '#7a7a8a'); // base
+  tu.rect(4, 10, 8, 1, '#aab0c4');
+  tu.rect(6, 5, 4, 5, '#9aa0b4'); // body
+  tu.rect(9, 6, 5, 2, '#5a5a66'); // barrel
+  tu.px(14, 6, '#ffd23a');
+  tu.outline('#21161f');
+  tu.commit(scene);
+
+  // Companion: a small familiar (orb with ears + eyes).
+  const pe = new PixelCanvas(scene, 'icon-pet', 16, 16, 1);
+  pe.rect(5, 6, 6, 6, '#6b3fc0');
+  pe.rect(5, 6, 6, 1, '#a87af0');
+  pe.px(5, 4, '#6b3fc0'); // ears
+  pe.px(10, 4, '#6b3fc0');
+  pe.px(5, 5, '#6b3fc0');
+  pe.px(10, 5, '#6b3fc0');
+  pe.px(6, 8, '#ffffff');
+  pe.px(9, 8, '#ffffff');
+  pe.outline('#1a0a26');
+  pe.commit(scene);
+
+  // Storm: a cloud with a bolt beneath.
+  const st = new PixelCanvas(scene, 'icon-storm', 16, 16, 1);
+  st.rect(3, 3, 10, 4, '#8a90a4');
+  st.rect(3, 3, 10, 1, '#cfd6e6');
+  st.rect(5, 7, 2, 3, '#ffe23a');
+  st.rect(7, 9, 2, 3, '#ffe23a');
+  st.rect(9, 7, 2, 3, '#ffe23a');
+  st.outline('#21161f');
+  st.commit(scene);
+}
+
+/** Plot a 1px-thick ring of palette colour on a PixelCanvas. */
+function ringPixels(pc: PixelCanvas, cx: number, cy: number, r: number, color: string): void {
+  for (let a = 0; a < 360; a += 12) {
+    const x = Math.round(cx + Math.cos((a * Math.PI) / 180) * r);
+    const y = Math.round(cy + Math.sin((a * Math.PI) / 180) * r);
+    pc.px(x, y, color);
+  }
+}
+
+/** Fill a disk of palette colour on a PixelCanvas. */
+function diskPixels(pc: PixelCanvas, cx: number, cy: number, r: number, color: string): void {
+  for (let y = -r; y <= r; y++) {
+    for (let x = -r; x <= r; x++) {
+      if (x * x + y * y <= r * r) pc.px(cx + x, cy + y, color);
+    }
+  }
 }

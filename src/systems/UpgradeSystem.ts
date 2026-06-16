@@ -6,7 +6,7 @@ import { weightedSample } from '../util/math';
 import type { WeaponSystem } from './WeaponSystem';
 
 /** Maximum distinct weapons a player can carry before only level-ups are offered. */
-const MAX_WEAPONS = 6;
+const MAX_WEAPONS = 8;
 
 /**
  * Builds the level-up choice list. For each owned, non-maxed weapon it rolls a
@@ -54,24 +54,26 @@ export class UpgradeSystem {
       );
     }
 
-    // New-weapon offers (if loadout has room), biased toward missing archetypes.
+    // New-weapon offers (if loadout has room), biased toward missing archetypes and
+    // strongly boosted while the player still has few weapons (so variety shows fast).
+    const newWeaponChoices: UpgradeChoice[] = [];
     if (this.weapons.weaponCount < MAX_WEAPONS) {
       const ownedTypes = new Set(this.weapons.ownedIds.map((id) => WEAPONS[id].type));
+      const few = this.weapons.weaponCount < 3;
       for (const def of OFFERABLE_WEAPONS) {
         if (this.weapons.hasWeapon(def.id)) continue;
-        const w = ownedTypes.has(def.type) ? 1.1 : 1.9;
-        add(
-          {
-            id: `newWeapon-${def.id}`,
-            name: def.name,
-            description: def.description,
-            icon: def.textureKey,
-            kind: 'newWeapon',
-            badge: 'New!',
-            apply: (_run, weapons) => weapons.addWeapon(def.id),
-          },
-          w
-        );
+        const w = ownedTypes.has(def.type) ? (few ? 1.4 : 1.1) : few ? 2.6 : 1.9;
+        const choice: UpgradeChoice = {
+          id: `newWeapon-${def.id}`,
+          name: def.name,
+          description: def.description,
+          icon: def.textureKey,
+          kind: 'newWeapon',
+          badge: 'New!',
+          apply: (_run, weapons) => weapons.addWeapon(def.id),
+        };
+        add(choice, w);
+        newWeaponChoices.push(choice);
       }
     }
 
@@ -79,6 +81,18 @@ export class UpgradeSystem {
     for (const p of PASSIVE_UPGRADES) add(p, 1);
 
     const chosen = weightedSample(pool, count, (c) => weights.get(c) ?? 1);
+
+    // Guarantee a new weapon early so the player isn't stuck on one weapon.
+    if (
+      this.weapons.weaponCount < 2 &&
+      newWeaponChoices.length > 0 &&
+      !chosen.some((c) => c.kind === 'newWeapon')
+    ) {
+      const pick = newWeaponChoices[Math.floor(Math.random() * newWeaponChoices.length)];
+      if (chosen.length === 0) chosen.push(pick);
+      else chosen[chosen.length - 1] = pick;
+    }
+
     if (chosen.length === 0) chosen.push(HEAL_CHOICE);
     return chosen;
   }

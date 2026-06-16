@@ -1,64 +1,46 @@
-import Phaser from 'phaser';
-import { GAME } from '../config/GameConfig';
-import type { RunState } from '../state/RunState';
-import type { WeaponDef, WeaponInstance, WeaponMod } from '../types';
+import type { WeaponDef, WeaponInstance, WeaponMod, WeaponType } from '../types';
 import { WEAPONS, EVOLUTIONS, type EvolutionRecipe } from '../data/weapons';
-import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
-import type { Projectile } from '../entities/Projectile';
+import type { WeaponBehavior, WeaponContext } from './weapons/WeaponBehavior';
+import { ProjectileBehavior } from './weapons/projectile';
+import { AuraBehavior } from './weapons/aura';
+import { OrbitBehavior } from './weapons/orbit';
+import { BoomerangBehavior } from './weapons/boomerang';
+import { ChainBehavior } from './weapons/chain';
+import { NovaBehavior } from './weapons/nova';
+import { StormBehavior } from './weapons/storm';
+import { BeamBehavior } from './weapons/beam';
+import { TurretBehavior } from './weapons/turret';
+import { CompanionBehavior } from './weapons/companion';
+import { SingularityBehavior } from './weapons/singularity';
 
-/** Callback GameScene provides so all weapon types route kills through one path. */
-export type DamageEnemyFn = (
-  enemy: Enemy,
-  amount: number,
-  fromX?: number,
-  fromY?: number,
-  element?: string
-) => void;
-
-export interface WeaponContext {
-  scene: Phaser.Scene;
-  run: RunState;
-  player: Player;
-  enemies: Phaser.Physics.Arcade.Group;
-  getProjectile: () => Projectile | null;
-  damageEnemy: DamageEnemyFn;
-}
-
-/** Per-aura-weapon tint so each field reads differently under ADD blend. */
-const AURA_TINT: Record<string, number> = {
-  aura: 0x9fe8ff,
-  'aura-evo': 0xd8f4ff,
-  halo: 0xff8a3a,
-  venom: 0x8aff5a,
-};
-
-/** Orbit visuals: texture scale and hit radius (world px) per weapon. */
-const ORBIT_VIS: Record<string, { scale: number; hit: number; spin: number }> = {
-  blade: { scale: 0.7, hit: 26, spin: 2.6 },
-  'blade-evo': { scale: 0.8, hit: 28, spin: 3.4 },
-  tome: { scale: 0.8, hit: 24, spin: 2.0 },
-  sawblade: { scale: 1.1, hit: 32, spin: 5.0 },
-};
+export type { WeaponContext, DamageEnemyFn } from './weapons/WeaponBehavior';
 
 /**
- * Owns the player's active weapons and fires them. Projectile weapons spawn pooled
- * projectiles (collision handled by GameScene); aura and orbit weapons apply damage
- * directly each tick/frame through the provided damageEnemy callback.
+ * Owns the player's active weapons and drives them. Each WeaponType is implemented by
+ * a WeaponBehavior in ./weapons/, looked up from a registry — so adding a new weapon
+ * behavior is a new handler file + registry entry, with no changes to this class.
  */
 export class WeaponSystem {
   private ctx: WeaponContext;
   private owned = new Map<string, WeaponInstance>();
-
-  /** Orbit visuals, one image array per orbit weapon id. */
-  private orbits = new Map<string, Phaser.GameObjects.Image[]>();
-  private orbitAngle = new Map<string, number>();
-
-  /** Aura field sprites, one per aura weapon id. */
-  private auras = new Map<string, Phaser.GameObjects.Image>();
+  private registry: Record<WeaponType, WeaponBehavior>;
 
   constructor(ctx: WeaponContext) {
     this.ctx = ctx;
+    // Handlers are per-WeaponSystem so any pooled visuals reset between runs.
+    this.registry = {
+      projectile: new ProjectileBehavior(),
+      aura: new AuraBehavior(),
+      orbit: new OrbitBehavior(),
+      boomerang: new BoomerangBehavior(),
+      chain: new ChainBehavior(),
+      nova: new NovaBehavior(),
+      storm: new StormBehavior(),
+      beam: new BeamBehavior(),
+      turret: new TurretBehavior(),
+      companion: new CompanionBehavior(),
+      singularity: new SingularityBehavior(),
+    };
   }
 
   get ownedIds(): string[] {
@@ -101,6 +83,7 @@ export class WeaponSystem {
     this.owned.set(id, inst);
     this.recompute(inst);
     this.refreshDerivedStats();
+    this.registry[def.type].onAdd?.(inst, this.ctx);
   }
 
   /** Mods this weapon can still be offered (repeatable, or not yet taken). */
@@ -157,7 +140,8 @@ export class WeaponSystem {
   refreshDerivedStats(): void {
     for (const inst of this.owned.values()) {
       this.recompute(inst);
-      if (inst.def.type === 'projectile') {
+      // Multishot passive adds projectiles to projectile-like weapons.
+      if (inst.def.type === 'projectile' || inst.def.type === 'boomerang') {
         inst.count += this.ctx.run.projectileBonus;
       }
     }
@@ -177,188 +161,16 @@ export class WeaponSystem {
 
   /** Replace a base weapon with its evolved form. */
   evolve(recipe: EvolutionRecipe): void {
-    if (!this.owned.has(recipe.baseId)) return;
-    // Tear down base weapon visuals before removing it.
+    const oldInst = this.owned.get(recipe.baseId);
+    if (!oldInst) return;
+    this.registry[oldInst.def.type].onRemove?.(oldInst, this.ctx);
     this.owned.delete(recipe.baseId);
-    this.destroyOrbit(recipe.baseId);
-    this.destroyAura(recipe.baseId);
     this.addWeapon(recipe.resultId);
   }
 
   update(time: number, delta: number): void {
-    const { run } = this.ctx;
     for (const inst of this.owned.values()) {
-      switch (inst.def.type) {
-        case 'projectile':
-          inst.cooldownRemaining -= delta;
-          if (inst.cooldownRemaining <= 0) {
-            const fired = this.fireProjectile(inst);
-            if (fired) inst.cooldownRemaining = inst.cooldownMs * run.cooldownMult;
-            else inst.cooldownRemaining = 120; // retry shortly
-          }
-          break;
-        case 'aura':
-          inst.cooldownRemaining -= delta;
-          if (inst.cooldownRemaining <= 0) {
-            inst.cooldownRemaining = inst.cooldownMs * run.cooldownMult;
-            this.tickAura(inst);
-          }
-          break;
-        case 'orbit':
-          // handled in updateOrbits
-          break;
-      }
-    }
-    this.updateAuraVisuals();
-    this.updateOrbits(time, delta);
-  }
-
-  // --- Projectile weapons ---
-
-  private nearestEnemy(): Enemy | null {
-    const { player } = this.ctx;
-    let best: Enemy | null = null;
-    let bestDist = Infinity;
-    const children = this.ctx.enemies.getChildren() as Enemy[];
-    for (const e of children) {
-      if (!e.active) continue;
-      const d = Phaser.Math.Distance.Squared(player.x, player.y, e.x, e.y);
-      if (d < bestDist) {
-        bestDist = d;
-        best = e;
-      }
-    }
-    return best;
-  }
-
-  private fireProjectile(inst: WeaponInstance): boolean {
-    const target = this.nearestEnemy();
-    if (!target) return false;
-    const { player, run } = this.ctx;
-    const baseAngle = Phaser.Math.Angle.Between(player.x, player.y, target.x, target.y);
-    const spread = Phaser.Math.DegToRad(14);
-    const count = Math.max(1, inst.count);
-    const dmg = inst.damage * run.damageMult;
-    const speed = inst.projectileSpeed * run.projectileSpeedMult;
-    for (let i = 0; i < count; i++) {
-      const offset = (i - (count - 1) / 2) * spread;
-      const proj = this.ctx.getProjectile();
-      if (!proj) break;
-      proj.fire(player.x, player.y, baseAngle + offset, speed, dmg, inst.pierce, inst.def.textureKey, inst.tint, inst.element);
-    }
-    return true;
-  }
-
-  // --- Aura weapons ---
-
-  private updateAuraVisuals(): void {
-    const { scene, player, run } = this.ctx;
-    // Remove sprites for auras no longer owned.
-    for (const [id, sprite] of this.auras) {
-      if (!this.owned.has(id)) {
-        sprite.destroy();
-        this.auras.delete(id);
-      }
-    }
-    for (const inst of this.owned.values()) {
-      if (inst.def.type !== 'aura') continue;
-      let sprite = this.auras.get(inst.def.id);
-      if (!sprite) {
-        sprite = scene.add
-          .image(player.x, player.y, 'aura-field')
-          .setDepth(10)
-          .setBlendMode(Phaser.BlendModes.ADD)
-          .setAlpha(0.5)
-          .setTint(AURA_TINT[inst.def.id] ?? 0xffffff);
-        this.auras.set(inst.def.id, sprite);
-      }
-      sprite.setPosition(player.x, player.y);
-      sprite.setTint(inst.tint ?? AURA_TINT[inst.def.id] ?? 0xffffff);
-      // aura-field texture is 128px (radius 64); scale to desired world radius.
-      sprite.setScale((inst.radius * run.areaMult) / 64);
-    }
-  }
-
-  private tickAura(inst: WeaponInstance): void {
-    const { player, run } = this.ctx;
-    const r = inst.radius * run.areaMult;
-    const r2 = r * r;
-    const dmg = inst.damage * run.damageMult;
-    const children = this.ctx.enemies.getChildren() as Enemy[];
-    for (const e of children) {
-      if (!e.active) continue;
-      if (Phaser.Math.Distance.Squared(player.x, player.y, e.x, e.y) <= r2) {
-        this.ctx.damageEnemy(e, dmg, player.x, player.y, inst.element);
-      }
-    }
-  }
-
-  private destroyAura(id: string): void {
-    this.auras.get(id)?.destroy();
-    this.auras.delete(id);
-  }
-
-  // --- Orbit weapons ---
-
-  private destroyOrbit(id: string): void {
-    const arr = this.orbits.get(id);
-    if (arr) for (const b of arr) b.destroy();
-    this.orbits.delete(id);
-    this.orbitAngle.delete(id);
-  }
-
-  private updateOrbits(time: number, delta: number): void {
-    const { scene, player, run } = this.ctx;
-    // Remove orbit groups for weapons no longer owned.
-    for (const id of [...this.orbits.keys()]) {
-      if (!this.owned.has(id)) this.destroyOrbit(id);
-    }
-    for (const inst of this.owned.values()) {
-      if (inst.def.type !== 'orbit') continue;
-      const id = inst.def.id;
-      const vis = ORBIT_VIS[id] ?? ORBIT_VIS.blade;
-      let arr = this.orbits.get(id);
-      if (!arr) {
-        arr = [];
-        this.orbits.set(id, arr);
-        this.orbitAngle.set(id, 0);
-      }
-      const desired = Math.max(1, inst.count);
-      while (arr.length < desired) {
-        arr.push(
-          scene.add
-            .image(player.x, player.y, inst.def.textureKey)
-            .setDepth(31)
-            .setScale(GAME.spriteScale * vis.scale)
-        );
-      }
-      while (arr.length > desired) arr.pop()?.destroy();
-
-      let angle = (this.orbitAngle.get(id) ?? 0) + (delta / 1000) * vis.spin;
-      this.orbitAngle.set(id, angle);
-      const radius = inst.radius * run.areaMult;
-      const r2 = vis.hit * vis.hit;
-      const dmg = inst.damage * run.damageMult;
-      const enemies = this.ctx.enemies.getChildren() as Enemy[];
-      const n = arr.length;
-      for (let i = 0; i < n; i++) {
-        const a = angle + (i / n) * Math.PI * 2;
-        const bx = player.x + Math.cos(a) * radius;
-        const by = player.y + Math.sin(a) * radius;
-        const blade = arr[i];
-        blade.setPosition(bx, by).setRotation(a * 2);
-        if (inst.tint !== undefined) blade.setTint(inst.tint);
-        else blade.clearTint();
-        for (const e of enemies) {
-          if (!e.active) continue;
-          if (Phaser.Math.Distance.Squared(bx, by, e.x, e.y) <= r2) {
-            if (time >= e.nextBladeHitAt) {
-              e.nextBladeHitAt = time + 350;
-              this.ctx.damageEnemy(e, dmg, bx, by, inst.element);
-            }
-          }
-        }
-      }
+      this.registry[inst.def.type].update(inst, this.ctx, time, delta);
     }
   }
 

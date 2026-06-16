@@ -11,6 +11,12 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   private dieAt = 0;
   /** Enemies already hit (so a piercing shot doesn't multi-hit the same target). */
   private hits = new Set<Enemy>();
+  // Boomerang flight.
+  private mode: 'straight' | 'boomerang' = 'straight';
+  private owner?: { x: number; y: number };
+  private speedVal = 0;
+  private returnAt = 0;
+  private returning = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     // Registration/physics handled by the owning Arcade Group (classType).
@@ -29,12 +35,19 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     texture: string,
     tint?: number,
     element?: string,
-    lifetimeMs = 2200
+    lifetimeMs = 2200,
+    mode: 'straight' | 'boomerang' = 'straight',
+    owner?: { x: number; y: number }
   ): void {
     this.damage = damage;
     this.pierce = pierce;
     this.element = element;
     this.hits.clear();
+    this.mode = mode;
+    this.owner = owner;
+    this.speedVal = speed;
+    this.returning = false;
+    this.returnAt = this.scene.time.now + lifetimeMs * 0.45;
     this.setTexture(texture);
     if (tint !== undefined) this.setTint(tint);
     else this.clearTint();
@@ -63,6 +76,21 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
 
   preUpdate(time: number, delta: number): void {
     super.preUpdate(time, delta);
+    if (this.mode === 'boomerang') {
+      this.rotation += (delta / 1000) * 14;
+      if (!this.returning && time >= this.returnAt) {
+        this.returning = true;
+        this.hits.clear(); // can hit foes again on the way back
+      }
+      if (this.returning && this.owner) {
+        const ang = Phaser.Math.Angle.Between(this.x, this.y, this.owner.x, this.owner.y);
+        this.scene.physics.velocityFromRotation(ang, this.speedVal, this.body!.velocity);
+        if (Phaser.Math.Distance.Between(this.x, this.y, this.owner.x, this.owner.y) < 24) {
+          this.kill();
+          return;
+        }
+      }
+    }
     if (time >= this.dieAt) this.kill();
   }
 

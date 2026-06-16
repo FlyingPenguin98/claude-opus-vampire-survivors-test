@@ -18,20 +18,25 @@ export const GAME = {
 } as const;
 
 export const PLAYER = {
-  maxHp: 100,
+  maxHp: 110,
   speed: 200,
   /** Seconds of invulnerability after taking a hit. */
-  invulnSeconds: 0.6,
+  invulnSeconds: 0.85,
   /** Base radius (world px) within which gems are pulled toward the player. */
   basePickupRadius: 90,
   /** Player collision body radius in source-sprite pixels. */
   bodyRadius: 5,
+  /** Active dodge: burst speed, how long the burst lasts, cooldown, and i-frames. */
+  dashSpeed: 640,
+  dashDurationMs: 160,
+  dashCooldownMs: 1200,
+  dashInvulnMs: 280,
 } as const;
 
 export const XP = {
   /** XP required for level 2; each subsequent level scales by the curve below. */
-  base: 5,
-  growth: 1.32,
+  base: 4,
+  growth: 1.28,
   /** Gem magnet acceleration once a gem is within pickup radius. */
   magnetSpeed: 520,
 } as const;

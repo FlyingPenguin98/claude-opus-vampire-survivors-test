@@ -5,6 +5,7 @@ import { generateGems } from './generators/gemGen';
 import { generateProjectiles } from './generators/projectileGen';
 import { generateTiles } from './generators/tileGen';
 import { generateIcons } from './generators/iconGen';
+import { generateSummons } from './generators/summonGen';
 
 /**
  * Builds every texture and animation used by the game, entirely in code. Run once
@@ -19,5 +20,6 @@ export const SpriteFactory = {
     generateGems(scene);
     generateProjectiles(scene);
     generateIcons(scene);
+    generateSummons(scene);
   },
 };

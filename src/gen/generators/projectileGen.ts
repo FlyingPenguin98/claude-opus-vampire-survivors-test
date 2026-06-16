@@ -137,4 +137,71 @@ export function generateProjectiles(scene: Phaser.Scene): void {
   saw.fillCircle(sc, sc, 1);
   saw.generateTexture('sawblade', 18, 18);
   saw.destroy();
+
+  // Singularity vortex: dark core with a bright violet rim (ADD blend, spun in-world).
+  const vor = scene.make.graphics({ x: 0, y: 0 }, false);
+  const vr = 32;
+  for (let i = vr; i > 0; i--) {
+    const t = i / vr; // 1 at rim, ->0 at center
+    const col = Phaser.Display.Color.Interpolate.ColorWithColor(
+      Phaser.Display.Color.ValueToColor(0x140020),
+      Phaser.Display.Color.ValueToColor(0xc060ff),
+      vr,
+      vr - i
+    );
+    vor.fillStyle(Phaser.Display.Color.GetColor(col.r, col.g, col.b), t * 0.5);
+    vor.fillCircle(vr, vr, i);
+  }
+  vor.fillStyle(0x000000, 0.9);
+  vor.fillCircle(vr, vr, Math.floor(vr * 0.45));
+  vor.generateTexture('vortex', vr * 2, vr * 2);
+  vor.destroy();
+
+  // Nova ring: a bright annulus, transparent inside.
+  const ring = scene.make.graphics({ x: 0, y: 0 }, false);
+  const nr = 32;
+  ring.lineStyle(5, 0xbfe8ff, 1);
+  ring.strokeCircle(nr, nr, nr - 4);
+  ring.lineStyle(9, 0x6ad8ff, 0.4);
+  ring.strokeCircle(nr, nr, nr - 6);
+  ring.generateTexture('nova-ring', nr * 2, nr * 2);
+  ring.destroy();
+
+  // Meteor telegraph: a thin orange targeting ring.
+  const mark = scene.make.graphics({ x: 0, y: 0 }, false);
+  mark.lineStyle(2, 0xff8a3a, 0.9);
+  mark.strokeCircle(24, 24, 22);
+  mark.lineStyle(2, 0xffd23a, 0.5);
+  mark.strokeCircle(24, 24, 14);
+  mark.generateTexture('meteor-mark', 48, 48);
+  mark.destroy();
+
+  // Explosion burst (reused for meteor impacts).
+  radialGlow(scene, 'explosion', 16, 0xffffff, 0xff6a2a);
+
+  // Beam: a horizontal gradient bar, bright center line fading to the edges.
+  const beam = scene.make.graphics({ x: 0, y: 0 }, false);
+  const bw = 64;
+  const bh = 16;
+  for (let y = 0; y < bh; y++) {
+    const d = Math.abs(y - bh / 2) / (bh / 2); // 0 center -> 1 edge
+    const a = (1 - d) * 0.9;
+    beam.fillStyle(d < 0.25 ? 0xffffff : 0x9ff0ff, a);
+    beam.fillRect(0, y, bw, 1);
+  }
+  beam.generateTexture('beam', bw, bh);
+  beam.destroy();
+
+  // Boomerang: a curved double-blade (drawn as two angled diamonds).
+  const boom = scene.make.graphics({ x: 0, y: 0 }, false);
+  boom.fillStyle(0x21161f, 1);
+  boom.fillRect(2, 6, 12, 4);
+  boom.fillRect(6, 2, 4, 12);
+  boom.fillStyle(0xcfd6e6, 1);
+  boom.fillRect(3, 7, 10, 2);
+  boom.fillRect(7, 3, 2, 10);
+  boom.fillStyle(0xffffff, 1);
+  boom.fillRect(7, 7, 2, 2);
+  boom.generateTexture('boomerang', 16, 16);
+  boom.destroy();
 }

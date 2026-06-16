@@ -11,6 +11,7 @@ import { XPGem } from '../entities/XPGem';
 import { Chest } from '../entities/Chest';
 import { DamageNumber } from '../entities/DamageNumber';
 import { WeaponSystem } from '../systems/WeaponSystem';
+import type { AoeOpts } from '../systems/weapons/WeaponBehavior';
 import { XPSystem } from '../systems/XPSystem';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
 import { Spawner } from '../systems/Spawner';
@@ -19,11 +20,13 @@ import { WEAPONS } from '../data/weapons';
 import { POWERUPS } from '../data/powerups';
 import { CHARACTERS, DEFAULT_CHARACTER } from '../data/characters';
 import { STAGES, DEFAULT_STAGE } from '../data/stages';
+import { DIFFICULTIES, DEFAULT_DIFFICULTY } from '../data/difficulty';
 import type {
   LoadoutView,
   UpgradeChoice,
   CharacterDef,
   StageDef,
+  DifficultyDef,
   EnemyDef,
   RunConfig,
   RunSummary,
@@ -39,11 +42,13 @@ type Reward = 'levelup' | 'chest';
  */
 export class GameScene extends Phaser.Scene {
   private run!: RunState;
-  private player!: Player;
+  /** Public so the HUD can read dash cooldown / player position. */
+  player!: Player;
   private playerPos = new Phaser.Math.Vector2();
 
   private character!: CharacterDef;
   private stage!: StageDef;
+  private difficulty!: DifficultyDef;
   private meta!: MetaData;
 
   private enemies!: Phaser.Physics.Arcade.Group;
@@ -74,6 +79,7 @@ export class GameScene extends Phaser.Scene {
     this.meta = data.meta ?? MetaState.get();
     this.character = data.character ?? CHARACTERS[DEFAULT_CHARACTER];
     this.stage = data.stage ?? STAGES[DEFAULT_STAGE];
+    this.difficulty = data.difficulty ?? DIFFICULTIES[DEFAULT_DIFFICULTY];
   }
 
   create(): void {
@@ -90,6 +96,8 @@ export class GameScene extends Phaser.Scene {
     this.run = new RunState();
     this.applyMeta();
     this.applyCharacter();
+    this.run.xpMult *= this.difficulty.xpMult;
+    this.run.goldMult *= this.difficulty.goldMult;
 
     // World + background.
     this.physics.world.setBounds(0, 0, GAME.worldWidth, GAME.worldHeight);
@@ -134,7 +142,12 @@ export class GameScene extends Phaser.Scene {
       player: this.player,
       enemies: this.enemies,
       getProjectile: () => this.projectiles.get() as Projectile | null,
-      damageEnemy: (e, amt, fx, fy) => this.damageEnemy(e, amt, fx, fy),
+      damageEnemy: (e, amt, fx, fy, el) => this.damageEnemy(e, amt, fx, fy, el),
+      allEnemies: () => this.enemies.getChildren() as Enemy[],
+      nearestEnemyTo: (x, y, exclude) => this.nearestEnemyTo(x, y, exclude),
+      aoeDamage: (x, y, r, dmg, opts) => this.aoeDamage(x, y, r, dmg, opts),
+      cameraShake: (d, i) => this.cameras.main.shake(d, i),
+      audio: AudioSystem,
     });
     this.weapons.addWeapon(this.character.startingWeapon);
     this.upgrades = new UpgradeSystem(this.run, this.weapons);
@@ -143,6 +156,7 @@ export class GameScene extends Phaser.Scene {
       this.enemies,
       this.playerPos,
       this.stage,
+      this.difficulty,
       (x, y, tx, ty, def) => this.fireEnemyShot(x, y, tx, ty, def),
       (b) => this.onBossSpawned(b)
     );
@@ -288,6 +302,40 @@ export class GameScene extends Phaser.Scene {
     dn.spawn(x, y, amount, crit, color);
   }
 
+  /** Nearest active enemy to a point, optionally excluding some (e.g. already hit). */
+  private nearestEnemyTo(x: number, y: number, exclude?: Set<Enemy>): Enemy | null {
+    let best: Enemy | null = null;
+    let bestDist = Infinity;
+    const children = this.enemies.getChildren() as Enemy[];
+    for (const e of children) {
+      if (!e.active || exclude?.has(e)) continue;
+      const d = Phaser.Math.Distance.Squared(x, y, e.x, e.y);
+      if (d < bestDist) {
+        bestDist = d;
+        best = e;
+      }
+    }
+    return best;
+  }
+
+  /** Damage every active enemy within `radius` of (x,y). Used by AoE weapons. */
+  private aoeDamage(x: number, y: number, radius: number, dmg: number, opts?: AoeOpts): void {
+    const r2 = radius * radius;
+    const children = this.enemies.getChildren() as Enemy[];
+    for (const e of children) {
+      if (!e.active) continue;
+      if (Phaser.Math.Distance.Squared(x, y, e.x, e.y) <= r2) {
+        this.dealDamage(e, dmg, {
+          fromX: opts?.knockback ? x : undefined,
+          fromY: opts?.knockback ? y : undefined,
+          element: opts?.element,
+          dot: opts?.dot,
+          color: opts?.color,
+        });
+      }
+    }
+  }
+
   private killEnemy(enemy: Enemy): void {
     const { x, y } = enemy;
     const def = enemy.def;
@@ -310,6 +358,7 @@ export class GameScene extends Phaser.Scene {
     if (enemy.isBoss) {
       this.run.bossKills += 1;
       this.boss = undefined;
+      this.spawner.setBossActive(false);
       this.events.emit(EVENTS.BOSS_DIED);
       this.cameras.main.flash(300, 255, 220, 120);
       this.spawnChest(x, y);
@@ -362,7 +411,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private applyPlayerDamage(raw: number): void {
-    const dmg = Math.max(1, raw - this.run.armor);
+    const scaled = raw * this.difficulty.enemyDmgMult;
+    const dmg = Math.max(1, scaled - this.run.armor);
     this.run.hp -= dmg;
     this.cameras.main.shake(120, 0.006);
     AudioSystem.hurt();
@@ -469,6 +519,7 @@ export class GameScene extends Phaser.Scene {
 
   private onBossSpawned(boss: Enemy): void {
     this.boss = boss;
+    this.spawner.setBossActive(true);
     this.events.emit(EVENTS.BOSS_SPAWNED, boss.def.name ?? 'BOSS');
     this.cameras.main.shake(400, 0.01);
     AudioSystem.bossSpawn();
@@ -489,7 +540,7 @@ export class GameScene extends Phaser.Scene {
     const summary: RunSummary = {
       timeSec: this.run.elapsed,
       kills: this.run.kills,
-      gold: this.run.gold,
+      gold: Math.round(this.run.gold * this.run.goldMult),
       level: this.run.level,
       stageId: this.stage.id,
       characterId: this.character.id,

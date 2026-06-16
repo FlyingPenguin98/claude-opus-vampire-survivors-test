@@ -47,7 +47,18 @@ export interface EnemyDef {
   chestChance?: number;
 }
 
-export type WeaponType = 'projectile' | 'aura' | 'orbit';
+export type WeaponType =
+  | 'projectile'
+  | 'aura'
+  | 'orbit'
+  | 'boomerang'
+  | 'chain'
+  | 'nova'
+  | 'storm'
+  | 'beam'
+  | 'turret'
+  | 'companion'
+  | 'singularity';
 
 /**
  * A single possible weapon upgrade drawn from the weapon's pool on level-up.
@@ -87,8 +98,17 @@ export interface WeaponDef {
   projectileSpeed?: number;
   pierce?: number;
   count?: number;
-  /** aura / orbit */
+  /** aura / orbit / nova / storm / singularity */
   radius?: number;
+  /** How long a spawned effect lives (singularity, turret). */
+  durationMs?: number;
+  /** Singularity inward pull strength. */
+  pullForce?: number;
+  /** beam reach + thickness. */
+  beamLength?: number;
+  beamWidth?: number;
+  /** chain: max distance a bolt can jump. */
+  jumpRange?: number;
   /** Pool of possible upgrades; a random one is offered each level-up. */
   mods: WeaponMod[];
   /** Evolution: weapon id this becomes when evolved. */
@@ -227,9 +247,23 @@ export interface AchievementDef {
   unlocks?: string[];
 }
 
-/** Everything a run needs: who, where, and the persistent meta to apply. */
+/** A difficulty preset: global multipliers applied to a run. */
+export interface DifficultyDef {
+  id: string;
+  name: string;
+  blurb: string;
+  enemyHpMult: number;
+  enemyDmgMult: number;
+  /** >1 means enemies spawn more often (spawn interval is divided by this). */
+  spawnRateMult: number;
+  xpMult: number;
+  goldMult: number;
+}
+
+/** Everything a run needs: who, where, how hard, and the persistent meta to apply. */
 export interface RunConfig {
   character: CharacterDef;
   stage: StageDef;
+  difficulty: DifficultyDef;
   meta: MetaData;
 }

@@ -6,15 +6,17 @@ import type { StageDef, WaveDef } from '../types';
  */
 function buildWaves(early: string[], mid: string[], late: string[]): WaveDef[] {
   const all = [...new Set([...early, ...mid, ...late])];
+  // Smoothed ramp: the old curve spiked hard at 140-200s (hp 1.7-2.1 @ 460-540ms),
+  // colliding with the 180s boss. This eases that window so power can keep pace.
   return [
-    { startSec: 0, enemyIds: early, spawnIntervalMs: 900, hpMult: 1, speedMult: 1, batchSize: 2 },
-    { startSec: 25, enemyIds: early, spawnIntervalMs: 800, hpMult: 1, speedMult: 1, batchSize: 3 },
-    { startSec: 55, enemyIds: [...early, ...mid], spawnIntervalMs: 740, hpMult: 1.15, speedMult: 1.05, batchSize: 3 },
-    { startSec: 95, enemyIds: mid, spawnIntervalMs: 640, hpMult: 1.35, speedMult: 1.1, batchSize: 4 },
-    { startSec: 140, enemyIds: [...mid, ...late], spawnIntervalMs: 540, hpMult: 1.7, speedMult: 1.14, batchSize: 4 },
-    { startSec: 200, enemyIds: [...mid, ...late], spawnIntervalMs: 460, hpMult: 2.1, speedMult: 1.2, batchSize: 5 },
-    { startSec: 280, enemyIds: late, spawnIntervalMs: 380, hpMult: 2.7, speedMult: 1.26, batchSize: 6 },
-    { startSec: 380, enemyIds: all, spawnIntervalMs: 320, hpMult: 3.6, speedMult: 1.34, batchSize: 7 },
+    { startSec: 0, enemyIds: early, spawnIntervalMs: 950, hpMult: 1.0, speedMult: 1.0, batchSize: 2 },
+    { startSec: 30, enemyIds: early, spawnIntervalMs: 850, hpMult: 1.05, speedMult: 1.0, batchSize: 2 },
+    { startSec: 70, enemyIds: [...early, ...mid], spawnIntervalMs: 780, hpMult: 1.15, speedMult: 1.03, batchSize: 3 },
+    { startSec: 120, enemyIds: mid, spawnIntervalMs: 700, hpMult: 1.3, speedMult: 1.06, batchSize: 3 },
+    { startSec: 170, enemyIds: mid, spawnIntervalMs: 640, hpMult: 1.45, speedMult: 1.08, batchSize: 3 },
+    { startSec: 230, enemyIds: [...mid, ...late], spawnIntervalMs: 560, hpMult: 1.7, speedMult: 1.12, batchSize: 4 },
+    { startSec: 300, enemyIds: late, spawnIntervalMs: 480, hpMult: 2.05, speedMult: 1.18, batchSize: 5 },
+    { startSec: 400, enemyIds: all, spawnIntervalMs: 400, hpMult: 2.6, speedMult: 1.25, batchSize: 6 },
   ];
 }
 
@@ -32,8 +34,8 @@ export const STAGES: Record<string, StageDef> = {
       ['skeleton', 'blob', 'wisp']
     ),
     bossSchedule: [
-      { timeSec: 180, bossId: 'revenant' },
-      { timeSec: 420, bossId: 'warlock' },
+      { timeSec: 210, bossId: 'revenant' },
+      { timeSec: 450, bossId: 'warlock' },
     ],
     durationSec: 600,
   },
@@ -50,8 +52,8 @@ export const STAGES: Record<string, StageDef> = {
       ['golem', 'blob', 'wisp']
     ),
     bossSchedule: [
-      { timeSec: 150, bossId: 'warlock' },
-      { timeSec: 420, bossId: 'behemoth' },
+      { timeSec: 195, bossId: 'warlock' },
+      { timeSec: 450, bossId: 'behemoth' },
     ],
     durationSec: 600,
     unlockId: 'stage-crypt',
@@ -69,8 +71,8 @@ export const STAGES: Record<string, StageDef> = {
       ['brute', 'golem', 'blob']
     ),
     bossSchedule: [
-      { timeSec: 150, bossId: 'behemoth' },
-      { timeSec: 400, bossId: 'revenant' },
+      { timeSec: 195, bossId: 'behemoth' },
+      { timeSec: 430, bossId: 'revenant' },
     ],
     durationSec: 540,
     unlockId: 'stage-wastes',

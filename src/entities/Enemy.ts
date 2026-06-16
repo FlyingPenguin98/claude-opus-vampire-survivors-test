@@ -154,6 +154,19 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.vulnUntil = this.scene.time.now + durMs;
   }
 
+  /**
+   * Pull this enemy toward a point (used by Singularity). Sets velocity and a brief
+   * knockback window so steering doesn't override it. Bosses fully resistant to
+   * knockback are immune.
+   */
+  pull(targetX: number, targetY: number, force: number, time: number): void {
+    if (this.knockbackResist >= 1) return;
+    const ang = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
+    const f = force * (1 - this.knockbackResist);
+    this.setVelocity(Math.cos(ang) * f, Math.sin(ang) * f);
+    this.knockbackUntil = Math.max(this.knockbackUntil, time + 40);
+  }
+
   private statusTint(time: number): number | undefined {
     if (time < this.burnUntil) return 0xff8a3a;
     if (time < this.poisonUntil) return 0x8aff5a;
