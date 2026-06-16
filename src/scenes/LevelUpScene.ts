@@ -125,8 +125,9 @@ export class LevelUpScene extends Phaser.Scene {
 
     container.add([bg, badge, icon, name, desc, key]);
     container.setSize(w, h);
+    // Padded hit area for forgiving touch taps.
     container.setInteractive(
-      new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h),
+      new Phaser.Geom.Rectangle(-w / 2 - 10, -h / 2 - 10, w + 20, h + 20),
       Phaser.Geom.Rectangle.Contains
     );
 
@@ -138,17 +139,21 @@ export class LevelUpScene extends Phaser.Scene {
       bg.setStrokeStyle(3, 0x3f6fc0);
       this.tweens.add({ targets: container, scale: 1, duration: 100 });
     });
+    // Select on tap (pointerup) and click (pointerdown) — pick() guards double-fire.
+    container.on('pointerup', () => this.pick(choice));
     container.on('pointerdown', () => this.pick(choice));
 
-    // Entrance animation.
-    container.setScale(0.6).setAlpha(0);
+    // Entrance animation: fade + slide (NOT scale) so the tap target is full-size
+    // immediately — scaling the hit box was making touch taps miss during the tween.
+    container.setAlpha(0);
+    container.y = y + 24;
     this.tweens.add({
       targets: container,
-      scale: 1,
+      y,
       alpha: 1,
-      duration: 220,
-      delay: index * 70,
-      ease: 'Back.out',
+      duration: 200,
+      delay: index * 60,
+      ease: 'Cubic.out',
     });
   }
 

@@ -6,7 +6,7 @@ import { weightedSample } from '../util/math';
 import type { WeaponSystem } from './WeaponSystem';
 
 /** Maximum distinct weapons a player can carry before only level-ups are offered. */
-const MAX_WEAPONS = 8;
+const MAX_WEAPONS = 6;
 
 /**
  * Builds the level-up choice list. For each owned, non-maxed weapon it rolls a
@@ -33,6 +33,7 @@ export class UpgradeSystem {
     };
 
     // Level-up offers: one random upgrade rolled from each owned, non-maxed weapon.
+    // Weighted up a touch so deepening your weapons competes well with new picks.
     for (const id of this.weapons.ownedIds) {
       if (this.weapons.isMaxed(id)) continue;
       const inst = this.weapons.getInstance(id)!;
@@ -50,19 +51,22 @@ export class UpgradeSystem {
           badge: `Lv ${nextLevel}`,
           apply: (_run, weapons) => weapons.applyMod(id, mod.id),
         },
-        1.1
+        1.4
       );
     }
 
-    // New-weapon offers (if loadout has room), biased toward missing archetypes and
-    // strongly boosted while the player still has few weapons (so variety shows fast).
+    // New-weapon offers: only a FEW candidates per roll (not every unowned weapon),
+    // biased toward missing archetypes — so new weapons don't flood the choices.
     const newWeaponChoices: UpgradeChoice[] = [];
     if (this.weapons.weaponCount < MAX_WEAPONS) {
       const ownedTypes = new Set(this.weapons.ownedIds.map((id) => WEAPONS[id].type));
-      const few = this.weapons.weaponCount < 3;
-      for (const def of OFFERABLE_WEAPONS) {
-        if (this.weapons.hasWeapon(def.id)) continue;
-        const w = ownedTypes.has(def.type) ? (few ? 1.4 : 1.1) : few ? 2.6 : 1.9;
+      const avail = OFFERABLE_WEAPONS.filter((d) => !this.weapons.hasWeapon(d.id));
+      const candCount = this.weapons.weaponCount < 3 ? 2 : 1;
+      const cands = weightedSample(avail, Math.min(candCount, avail.length), (d) =>
+        ownedTypes.has(d.type) ? 1 : 2.2
+      );
+      for (const def of cands) {
+        const w = ownedTypes.has(def.type) ? 0.9 : 1.4;
         const choice: UpgradeChoice = {
           id: `newWeapon-${def.id}`,
           name: def.name,
@@ -77,8 +81,8 @@ export class UpgradeSystem {
       }
     }
 
-    // Passive boosts (can repeat).
-    for (const p of PASSIVE_UPGRADES) add(p, 1);
+    // Passive boosts: sample a handful per roll (not all 15) so they don't flood either.
+    for (const p of weightedSample(PASSIVE_UPGRADES, 4)) add(p, 1.1);
 
     const chosen = weightedSample(pool, count, (c) => weights.get(c) ?? 1);
 
