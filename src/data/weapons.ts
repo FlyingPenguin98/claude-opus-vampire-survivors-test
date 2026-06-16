@@ -132,6 +132,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
     id: 'chain', name: 'Chain Lightning', type: 'chain', textureKey: 'icon-chain',
     description: 'A bolt that arcs between nearby enemies.',
     maxLevel: 6, damage: 10, cooldownMs: 950, count: 3, jumpRange: 200,
+    evolvesInto: 'chain-evo', requiresPassive: 'passive-velocity',
     mods: [dmg(), dmgBig(), cd(), cdBig(), jumpMod(), jumpMod(), elFrost(), elShadow()],
   },
   nova: {
@@ -144,18 +145,21 @@ export const WEAPONS: Record<string, WeaponDef> = {
     id: 'storm', name: 'Meteor Storm', type: 'storm', textureKey: 'icon-storm',
     description: 'Calls down meteors at random points around you.',
     maxLevel: 6, damage: 24, cooldownMs: 2200, radius: 64, count: 3,
+    evolvesInto: 'storm-evo', requiresPassive: 'passive-rage',
     mods: [dmg(), dmgBig(), area(), areaBig(), strikeMod(), cd(), elFlame(), elShadow()],
   },
   beam: {
     id: 'beam', name: 'Death Ray', type: 'beam', textureKey: 'icon-beam',
     description: 'A continuous beam that tracks the nearest foe.',
     maxLevel: 6, damage: 4, cooldownMs: 120, beamLength: 280, beamWidth: 34, radius: 1,
+    evolvesInto: 'beam-evo', requiresPassive: 'passive-area',
     mods: [dmg(), dmgBig(), cd(), elFrost(), elShadow(), elHoly(), area()],
   },
   turret: {
     id: 'turret', name: 'Sentry Turret', type: 'turret', textureKey: 'icon-turret',
     description: 'Deploys a turret that auto-fires for a while.',
     maxLevel: 6, damage: 9, cooldownMs: 4000, count: 1, durationMs: 8000, pierce: 1,
+    evolvesInto: 'turret-evo', requiresPassive: 'passive-armor',
     mods: [dmg(), dmgBig(), cd(), summonMod(), summonMod(), elFlame(), elShadow()],
   },
   companion: {
@@ -168,6 +172,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
     id: 'singularity', name: 'Singularity', type: 'singularity', textureKey: 'icon-singularity',
     description: 'A black hole that drags enemies in and grinds them.',
     maxLevel: 6, damage: 7, cooldownMs: 3200, radius: 120, durationMs: 2600, pullForce: 240,
+    evolvesInto: 'singularity-evo', requiresPassive: 'passive-magnet',
     mods: [dmg(), dmgBig(), area(), areaBig(), cd(), elVenom(), elFrost()],
   },
 
@@ -201,6 +206,36 @@ export const WEAPONS: Record<string, WeaponDef> = {
     description: 'A whirling wall of six razor blades.',
     maxLevel: 1, damage: 30, cooldownMs: 9999, radius: 95, count: 6,
     evolvedFrom: 'blade', mods: [],
+  },
+  'chain-evo': {
+    id: 'chain-evo', name: 'Tempest', type: 'chain', textureKey: 'icon-chain',
+    description: 'A storm of lightning that leaps across the whole swarm.',
+    maxLevel: 1, damage: 22, cooldownMs: 600, count: 7, jumpRange: 270,
+    evolvedFrom: 'chain', mods: [],
+  },
+  'storm-evo': {
+    id: 'storm-evo', name: 'Cataclysm', type: 'storm', textureKey: 'icon-storm',
+    description: 'A relentless barrage of devastating meteors.',
+    maxLevel: 1, damage: 44, cooldownMs: 1700, radius: 90, count: 6,
+    evolvedFrom: 'storm', mods: [],
+  },
+  'beam-evo': {
+    id: 'beam-evo', name: 'Annihilation Ray', type: 'beam', textureKey: 'icon-beam',
+    description: 'A vast, searing beam that vaporizes everything in line.',
+    maxLevel: 1, damage: 8, cooldownMs: 90, beamLength: 440, beamWidth: 62, radius: 1,
+    evolvedFrom: 'beam', mods: [],
+  },
+  'turret-evo': {
+    id: 'turret-evo', name: 'War Machine', type: 'turret', textureKey: 'icon-turret',
+    description: 'Three heavy turrets that lay down withering fire.',
+    maxLevel: 1, damage: 16, cooldownMs: 3000, count: 3, durationMs: 11000, pierce: 2,
+    evolvedFrom: 'turret', mods: [],
+  },
+  'singularity-evo': {
+    id: 'singularity-evo', name: 'Event Horizon', type: 'singularity', textureKey: 'icon-singularity',
+    description: 'A colossal black hole no enemy can escape.',
+    maxLevel: 1, damage: 14, cooldownMs: 2600, radius: 185, durationMs: 3600, pullForce: 360,
+    evolvedFrom: 'singularity', mods: [],
   },
 };
 
