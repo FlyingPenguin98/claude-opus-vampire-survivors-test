@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { GAME } from '../../config/GameConfig';
 import type { WeaponInstance } from '../../types';
 import type { WeaponBehavior, WeaponContext } from './WeaponBehavior';
 
@@ -26,7 +27,7 @@ export class TurretBehavior implements WeaponBehavior {
     if (inst.cooldownRemaining <= 0) {
       inst.cooldownRemaining = inst.cooldownMs * ctx.run.cooldownMult;
       const cap = Math.max(1, inst.count);
-      const s = ctx.scene.add.image(ctx.player.x, ctx.player.y, 'turret').setDepth(14);
+      const s = ctx.scene.add.image(ctx.player.x, ctx.player.y, 'turret').setDepth(14).setScale(GAME.spriteScale);
       arr.push({ sprite: s, x: ctx.player.x, y: ctx.player.y, expireAt: time + (inst.def.durationMs ?? 8000), nextFireAt: time + 300 });
       while (arr.length > cap) arr.shift()?.sprite.destroy();
     }
