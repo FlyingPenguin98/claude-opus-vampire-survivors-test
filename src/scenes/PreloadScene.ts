@@ -11,7 +11,15 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   create(): void {
-    SpriteFactory.generateAll(this);
+    try {
+      SpriteFactory.generateAll(this);
+    } catch (err) {
+      const overlay = document.getElementById('nf-error');
+      const msg = document.getElementById('nf-error-msg');
+      if (msg) msg.textContent = 'Failed to build game art: ' + (err instanceof Error ? err.message : String(err));
+      if (overlay) overlay.style.display = 'flex';
+      throw err;
+    }
     this.scene.start('TitleScene');
   }
 }

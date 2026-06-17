@@ -159,12 +159,12 @@ export class UIScene extends Phaser.Scene {
       });
     };
 
-    // Dash (bottom-right).
-    mkButton(width - 54, height - 54, 38, '⚡', '26px', () => {
+    // Dash (bottom-right, inset from the edge for notch/home-indicator clearance).
+    mkButton(width - 64, height - 64, 38, '⚡', '26px', () => {
       if (!this.gameScene.scene.isPaused()) this.gameScene.player?.tryDash();
     });
     // Pause (top-right, below the gold/kills readouts).
-    mkButton(width - 30, 92, 22, '❚❚', '16px', () => this.gameScene.requestPause());
+    mkButton(width - 40, 100, 22, '❚❚', '16px', () => this.gameScene.requestPause());
   }
 
   /** Rebuild the compact weapon/passive icon row from a loadout snapshot. */

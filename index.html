@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
     <title>Nightfall Survivors</title>
     <style>
       :root {
@@ -28,10 +31,57 @@
         image-rendering: pixelated;
         image-rendering: crisp-edges;
       }
+      /* Full-screen overlays (rotate prompt + fatal error). Hidden by default. */
+      .nf-overlay {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        text-align: center;
+        padding: 24px;
+        background: #0b0b14;
+        color: #cfd6e6;
+        z-index: 10;
+      }
+      .nf-overlay h1 {
+        color: #f2c14e;
+        font-family: Georgia, serif;
+        margin: 0 0 12px;
+      }
+      #nf-rotate .icon {
+        font-size: 56px;
+        margin-bottom: 8px;
+        animation: nf-spin 2s ease-in-out infinite;
+      }
+      @keyframes nf-spin {
+        0%, 60% { transform: rotate(0deg); }
+        80%, 100% { transform: rotate(90deg); }
+      }
+      #nf-error button {
+        margin-top: 16px;
+        padding: 10px 20px;
+        font: inherit;
+        color: #0b0b14;
+        background: #46d873;
+        border: 0;
+        border-radius: 6px;
+      }
     </style>
   </head>
   <body>
     <div id="game-container"></div>
+    <div id="nf-rotate" class="nf-overlay">
+      <div class="icon">📱</div>
+      <h1>Please rotate your device</h1>
+      <p>Nightfall Survivors is played in landscape.</p>
+    </div>
+    <div id="nf-error" class="nf-overlay">
+      <h1>Something went wrong</h1>
+      <p id="nf-error-msg">The game failed to start.</p>
+      <button onclick="location.reload()">Reload</button>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

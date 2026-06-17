@@ -41,6 +41,16 @@ class Audio {
     this.startMusic();
   }
 
+  /** Suspend audio when the app is backgrounded (saves CPU/battery, avoids desync). */
+  suspend(): void {
+    if (this.ctx && this.ctx.state === 'running') void this.ctx.suspend();
+  }
+
+  /** Resume audio when the app returns to the foreground. */
+  resume(): void {
+    if (this.ctx && this.ctx.state === 'suspended') void this.ctx.resume();
+  }
+
   private applyVolumes(): void {
     if (!this.ctx) return;
     const m = this.settings.muted ? 0 : this.settings.master;
