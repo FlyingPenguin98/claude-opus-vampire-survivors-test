@@ -204,6 +204,8 @@ export interface StageDef {
   tint: number;
   tintAlpha: number;
   waves: WaveDef[];
+  /** Tough champion mini-bosses unique to this stage (spawned on a cadence). */
+  elites: string[];
   /** Bosses spawned at the given elapsed times. */
   bossSchedule: { timeSec: number; bossId: string }[];
   /** Run length; surviving to it triggers victory. */

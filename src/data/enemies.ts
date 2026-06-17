@@ -130,4 +130,60 @@ export const ENEMIES: Record<string, EnemyDef> = {
     scale: 1.4,
     chestChance: 0.18,
   },
+
+  // --- Meadow (night creatures) ---
+  wolf: {
+    id: 'wolf', textureKey: 'wolf', hp: 16, speed: 95, contactDamage: 10, xpValue: 4,
+    goldChance: 0.05, behavior: 'charger', chargeIntervalMs: 2600, chargeSpeed: 360, bodyRadius: 5,
+  },
+  spriggan: {
+    id: 'spriggan', textureKey: 'spriggan', hp: 70, speed: 50, contactDamage: 14, xpValue: 8,
+    goldChance: 0.1, behavior: 'tank', knockbackResist: 0.5, bodyRadius: 6, scale: 1.2,
+  },
+  myconid: {
+    id: 'myconid', textureKey: 'myconid', hp: 30, speed: 42, contactDamage: 9, xpValue: 5,
+    goldChance: 0.06, behavior: 'splitter', splitInto: 'spore', splitCount: 3, bodyRadius: 6, scale: 1.15,
+  },
+  spore: {
+    id: 'spore', textureKey: 'spore', hp: 5, speed: 100, contactDamage: 4, xpValue: 1,
+    goldChance: 0.01, behavior: 'fast', bodyRadius: 4, scale: 0.7,
+  },
+
+  // --- Crypt (undead) ---
+  ghoul: {
+    id: 'ghoul', textureKey: 'ghoul', hp: 24, speed: 84, contactDamage: 11, xpValue: 4,
+    goldChance: 0.05, behavior: 'chase', bodyRadius: 5,
+  },
+  wraith: {
+    id: 'wraith', textureKey: 'wraith', hp: 20, speed: 56, contactDamage: 9, xpValue: 6,
+    goldChance: 0.08, behavior: 'shooter', shootIntervalMs: 1700, shotSpeed: 210, shotDamage: 10, standoff: 240, bodyRadius: 5,
+  },
+  boneknight: {
+    id: 'boneknight', textureKey: 'boneknight', hp: 110, speed: 60, contactDamage: 18, xpValue: 10,
+    goldChance: 0.12, behavior: 'tank', knockbackResist: 0.6, bodyRadius: 6, scale: 1.25, chestChance: 0.08,
+  },
+
+  // --- Wastes (ash/demon) ---
+  imp: {
+    id: 'imp', textureKey: 'imp', hp: 12, speed: 120, contactDamage: 8, xpValue: 3,
+    goldChance: 0.04, behavior: 'fast', bodyRadius: 4,
+  },
+  cinder: {
+    id: 'cinder', textureKey: 'cinder', hp: 22, speed: 54, contactDamage: 10, xpValue: 6,
+    goldChance: 0.08, behavior: 'shooter', shootIntervalMs: 1500, shotSpeed: 230, shotDamage: 12, standoff: 230, bodyRadius: 5,
+  },
+
+  // --- Elites (tough champions, unique per stage; guaranteed chest) ---
+  thornback: {
+    id: 'thornback', textureKey: 'thornback', hp: 320, speed: 46, contactDamage: 24, xpValue: 30,
+    goldChance: 0.3, behavior: 'tank', knockbackResist: 0.7, bodyRadius: 7, scale: 1.5, chestChance: 1,
+  },
+  'bone-colossus': {
+    id: 'bone-colossus', textureKey: 'bone-colossus', hp: 380, speed: 58, contactDamage: 26, xpValue: 34,
+    goldChance: 0.3, behavior: 'tank', knockbackResist: 0.7, bodyRadius: 7, scale: 1.6, chestChance: 1,
+  },
+  'magma-colossus': {
+    id: 'magma-colossus', textureKey: 'magma-colossus', hp: 460, speed: 64, contactDamage: 30, xpValue: 40,
+    goldChance: 0.35, behavior: 'charger', chargeIntervalMs: 2800, chargeSpeed: 360, knockbackResist: 0.8, bodyRadius: 7, scale: 1.6, chestChance: 1,
+  },
 };

@@ -29,13 +29,14 @@ export const STAGES: Record<string, StageDef> = {
     tint: 0x1b2a55,
     tintAlpha: 0.12,
     waves: buildWaves(
-      ['bat', 'zombie'],
-      ['zombie', 'slime', 'hound'],
-      ['skeleton', 'blob', 'wisp']
+      ['bat', 'slime'],
+      ['wolf', 'slime', 'blob'],
+      ['spriggan', 'myconid', 'wolf']
     ),
+    elites: ['thornback'],
     bossSchedule: [
-      { timeSec: 210, bossId: 'revenant' },
-      { timeSec: 450, bossId: 'warlock' },
+      { timeSec: 210, bossId: 'moon-priestess' },
+      { timeSec: 450, bossId: 'verdant-warden' },
     ],
     durationSec: 600,
   },
@@ -47,13 +48,14 @@ export const STAGES: Record<string, StageDef> = {
     tint: 0x12102a,
     tintAlpha: 0.28,
     waves: buildWaves(
-      ['bat', 'skeleton'],
-      ['skeleton', 'wisp', 'hound'],
-      ['golem', 'blob', 'wisp']
+      ['bat', 'zombie'],
+      ['skeleton', 'ghoul', 'wisp'],
+      ['boneknight', 'wraith', 'ghoul']
     ),
+    elites: ['bone-colossus'],
     bossSchedule: [
-      { timeSec: 195, bossId: 'warlock' },
-      { timeSec: 450, bossId: 'behemoth' },
+      { timeSec: 210, bossId: 'revenant' },
+      { timeSec: 450, bossId: 'warlock' },
     ],
     durationSec: 600,
     unlockId: 'stage-crypt',
@@ -66,13 +68,14 @@ export const STAGES: Record<string, StageDef> = {
     tint: 0x3a1410,
     tintAlpha: 0.26,
     waves: buildWaves(
-      ['hound', 'skeleton'],
-      ['golem', 'wisp', 'hound'],
-      ['brute', 'golem', 'blob']
+      ['imp', 'hound'],
+      ['hound', 'cinder', 'golem'],
+      ['brute', 'golem', 'cinder']
     ),
+    elites: ['magma-colossus'],
     bossSchedule: [
       { timeSec: 195, bossId: 'behemoth' },
-      { timeSec: 430, bossId: 'revenant' },
+      { timeSec: 430, bossId: 'cinder-tyrant' },
     ],
     durationSec: 540,
     unlockId: 'stage-wastes',

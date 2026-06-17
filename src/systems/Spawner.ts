@@ -27,6 +27,10 @@ export class Spawner {
   private fireShot: FireEnemyShotFn;
   /** While a boss is alive, regular spawns are curtailed so it's the focus. */
   private bossActive = false;
+  /** Countdown to the next elite champion spawn. */
+  private eliteTimer = Spawner.ELITE_FIRST_MS;
+  private static readonly ELITE_FIRST_MS = 75000;
+  private static readonly ELITE_INTERVAL_MS = 60000;
 
   constructor(
     scene: Phaser.Scene,
@@ -108,6 +112,15 @@ export class Spawner {
       }
     });
 
+    // Elite champions on a cadence (unique to the stage; guaranteed chest on death).
+    if (this.stage.elites.length > 0 && !this.bossActive) {
+      this.eliteTimer -= delta;
+      if (this.eliteTimer <= 0) {
+        this.eliteTimer = Spawner.ELITE_INTERVAL_MS;
+        this.spawnElite();
+      }
+    }
+
     const wave = this.currentWave(elapsed);
     this.spawnTimer -= delta;
     if (this.spawnTimer <= 0) {
@@ -124,6 +137,18 @@ export class Spawner {
         this.spawnOne(id, wave);
       }
     }
+  }
+
+  private spawnElite(): void {
+    if (this.countActive() >= SPAWN.maxAlive) return;
+    const id = this.stage.elites[Phaser.Math.Between(0, this.stage.elites.length - 1)];
+    const def = ENEMIES[id];
+    if (!def) return;
+    const enemy = this.enemies.get() as Enemy | null;
+    if (!enemy) return;
+    const { x, y } = this.ringPoint();
+    enemy.spawn(x, y, def, this.difficulty.enemyHpMult, 1, this.targetPos, this.fireShot);
+    this.scene.cameras.main.flash(200, 180, 180, 255);
   }
 
   private spawnBoss(bossId: string): void {

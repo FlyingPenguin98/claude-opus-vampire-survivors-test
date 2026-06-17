@@ -55,8 +55,9 @@ npm run preview  # serve the production build locally
 
 - **5 playable characters** (Knight, Mage, Ranger, Vampire, Warden), each with a unique
   starting weapon and stat profile. Most are unlocked via achievements.
-- **3 selectable stages** (Moonlit Meadow, Forgotten Crypt, Ashen Wastes) with their own
-  palettes, enemy mixes, boss timelines, and a survive-to-dawn victory.
+- **3 selectable stages** (Moonlit Meadow, Forgotten Crypt, Ashen Wastes), each with its **own
+  themed enemy pool, its own elite champion, and its own two bosses** (none shared between stages),
+  plus distinct palettes and a survive-to-dawn victory.
 - **20 weapons + 13 evolutions** spanning many firing styles — the classic projectile/aura/orbit
   trio (Arcane Bolt, Fireball, Knives, Frost Aura, Orbit Blades, …) plus eight all-new behaviors:
   **Boomerang** (flies out and back), **Chain Lightning** (arcs between foes), **Shockwave**
@@ -65,8 +66,10 @@ npm run preview  # serve the production build locally
   **Singularity** (a black hole that pulls enemies in).
 - **Difficulty modes** (Easy / Normal / Hard) scale enemy HP, damage, and spawn rate.
 - **15 stacking passives** (damage, crit, area, cooldown, armor, regen, luck, XP, and more).
-- **10 enemy types with real behaviors** — chargers that dash, splitters that burst into
-  spawn, ranged shooters that fire back — plus **3 bosses** with barrage/charge patterns.
+- **19 enemy types with real behaviors** — chargers that dash, splitters that burst into
+  spawn, ranged shooters that fire back — grouped into stage-themed pools (meadow wildlife,
+  crypt undead, ashen demons), plus **3 elite champions** (one per stage, guaranteed treasure)
+  and **6 bosses** (two unique per stage) with barrage/charge patterns.
 - **Meta shop:** spend earned gold on permanent powerups that apply to every run.
 - **Achievements & unlocks** that gate extra characters and stages.
 - **Procedural audio:** all SFX and music are synthesized at runtime via WebAudio

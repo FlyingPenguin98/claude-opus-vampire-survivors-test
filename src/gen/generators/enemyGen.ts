@@ -249,6 +249,228 @@ export function generateBrute(scene: Phaser.Scene): void {
   registerWobble(scene, 'brute', 4);
 }
 
+/** Four-legged beast (wolf), palette-swappable. */
+function beastSprite(scene: Phaser.Scene, key: string, paletteName: string): void {
+  const [, OUT, FUR_D, FUR, FUR_H, EYE] = PALETTES[paletteName];
+  const pc = new PixelCanvas(scene, key, 16, 16, 2);
+  for (let f = 0; f < 2; f++) {
+    pc.frame(f);
+    const step = f === 0 ? 0 : 1;
+    pc.rect(3, 7, 9, 4, FUR);
+    pc.rect(3, 7, 9, 1, FUR_H);
+    pc.px(3, 7, FUR_D);
+    pc.rect(11, 6, 4, 4, FUR);
+    pc.rect(11, 6, 4, 1, FUR_H);
+    pc.px(13, 8, EYE);
+    pc.px(11, 5, FUR_D);
+    pc.px(14, 9, OUT);
+    pc.px(2, 6, FUR);
+    pc.px(2, 7, FUR_D);
+    pc.rect(4, 11, 1, 2 + step, FUR_D);
+    pc.rect(7, 11, 1, 3 - step, FUR_D);
+    pc.rect(10, 11, 1, 2 + step, FUR_D);
+    pc.outline(OUT as string);
+  }
+  pc.commit(scene);
+  registerWobble(scene, key, 9);
+}
+
+/** Floating ghost/wraith, palette-swappable. */
+function ghostSprite(scene: Phaser.Scene, key: string, paletteName: string): void {
+  const [, OUT, ROBE_D, ROBE, ROBE_H, GLOW] = PALETTES[paletteName];
+  const pc = new PixelCanvas(scene, key, 16, 16, 2);
+  for (let f = 0; f < 2; f++) {
+    pc.frame(f);
+    const top = 3 + f;
+    pc.rect(5, top, 6, 8, ROBE);
+    pc.rect(6, top - 1, 4, 1, ROBE);
+    pc.rect(5, top, 6, 1, ROBE_H);
+    pc.rect(4, top + 2, 1, 4, ROBE_D);
+    pc.rect(11, top + 2, 1, 4, ROBE_D);
+    pc.px(5, top + 8, ROBE);
+    pc.px(7, top + 8 + (f ? 1 : 0), ROBE);
+    pc.px(9, top + 8, ROBE);
+    pc.px(6, top + 3, GLOW);
+    pc.px(9, top + 3, GLOW);
+    pc.outline(OUT as string);
+  }
+  pc.commit(scene);
+  registerWobble(scene, key, 5);
+}
+
+/** Shambling rotting humanoid (ghoul), palette-swappable. */
+function undeadSprite(scene: Phaser.Scene, key: string, paletteName: string): void {
+  const [, OUT, FLESH_S, FLESH, FLESH_H, RAG_D, RAG, EYE] = PALETTES[paletteName];
+  const pc = new PixelCanvas(scene, key, 16, 16, 2);
+  for (let f = 0; f < 2; f++) {
+    pc.frame(f);
+    const lean = f === 0 ? 0 : 1;
+    pc.rect(6, 2, 4, 4, FLESH);
+    pc.rect(6, 2, 4, 1, FLESH_H);
+    pc.px(6, 4, EYE);
+    pc.px(9, 4, EYE);
+    pc.px(7, 5, FLESH_S);
+    pc.rect(5, 6, 6, 5, RAG);
+    pc.rect(5, 6, 6, 1, FLESH_S);
+    pc.px(6, 8, RAG_D);
+    pc.px(9, 9, RAG_D);
+    pc.rect(4, 7, 1, 3 + lean, FLESH);
+    pc.rect(11, 7, 1, 3 + lean, FLESH);
+    pc.rect(6, 11, 1, 3, RAG_D);
+    pc.rect(9, 11, 1, 3, RAG_D);
+    pc.px(6, 11 + lean, FLESH_S);
+    pc.outline(OUT as string);
+  }
+  pc.commit(scene);
+  registerWobble(scene, key, 5);
+}
+
+/** Small demon flyer (imp): bat shape with horns, palette-swappable. */
+function batVariant(scene: Phaser.Scene, key: string, paletteName: string): void {
+  const [, OUT, WING_D, WING, BODY, EYE] = PALETTES[paletteName];
+  const pc = new PixelCanvas(scene, key, 16, 16, 2);
+  for (let f = 0; f < 2; f++) {
+    pc.frame(f);
+    const flap = f === 0 ? 0 : 1;
+    pc.rect(7, 7, 3, 4, BODY);
+    pc.px(7, 8, EYE);
+    pc.px(9, 8, EYE);
+    pc.px(6, 5, BODY); // horns
+    pc.px(10, 5, BODY);
+    const wy = 6 + flap;
+    pc.rect(2, wy, 5, 2, WING);
+    pc.rect(9, wy, 5, 2, WING);
+    pc.rect(2, wy, 2, 1, WING_D);
+    pc.rect(12, wy, 2, 1, WING_D);
+    pc.px(8, 11, WING_D); // tail
+    pc.outline(OUT as string);
+  }
+  pc.commit(scene);
+  registerWobble(scene, key, 10);
+}
+
+/** Armored undead knight, palette-swappable (boneknight, bone-colossus). */
+function knightSprite(scene: Phaser.Scene, key: string, paletteName: string): void {
+  const [, OUT, BONE_S, BONE, BONE_H, ARM_D, ARM, EYE] = PALETTES[paletteName];
+  void BONE_S;
+  const pc = new PixelCanvas(scene, key, 16, 16, 2);
+  for (let f = 0; f < 2; f++) {
+    pc.frame(f);
+    const sway = f ? 1 : 0;
+    // helmet
+    pc.rect(5, 2, 6, 4, ARM);
+    pc.rect(5, 2, 6, 1, BONE_H);
+    pc.px(5, 3, ARM_D);
+    pc.px(10, 3, ARM_D);
+    pc.px(6, 4, EYE);
+    pc.px(9, 4, EYE);
+    // chest armor
+    pc.rect(5, 6, 6, 5, ARM);
+    pc.rect(5, 6, 6, 1, BONE_H);
+    pc.rect(7, 6, 2, 5, ARM_D);
+    pc.px(4, 6, ARM);
+    pc.px(11, 6, ARM);
+    // bone arms + legs
+    pc.rect(4 + sway, 7, 1, 3, BONE);
+    pc.rect(11 - sway, 7, 1, 3, BONE);
+    pc.rect(6, 11, 1, 3, BONE);
+    pc.rect(9, 11, 1, 3, BONE);
+    pc.outline(OUT as string);
+  }
+  pc.commit(scene);
+  registerWobble(scene, key, 5);
+}
+
+/** Walking tree (spriggan/thornback), palette-swappable. */
+function sprigganSprite(scene: Phaser.Scene, key: string, paletteName: string): void {
+  const [, OUT, BARK_D, BARK, BARK_H, LEAF, EYE] = PALETTES[paletteName];
+  const pc = new PixelCanvas(scene, key, 16, 16, 2);
+  for (let f = 0; f < 2; f++) {
+    pc.frame(f);
+    const sway = f ? 1 : 0;
+    // leafy crown
+    pc.rect(4, 1, 8, 3, LEAF);
+    pc.px(3, 2, LEAF);
+    pc.px(12, 2, LEAF);
+    // trunk
+    pc.rect(6, 4, 4, 9, BARK);
+    pc.rect(6, 4, 1, 9, BARK_D);
+    pc.rect(9, 4, 1, 9, BARK_H);
+    // glowing eyes
+    pc.px(6, 6, EYE);
+    pc.px(9, 6, EYE);
+    // branch arms
+    pc.rect(4, 6 + sway, 2, 1, BARK);
+    pc.px(3, 5 + sway, LEAF);
+    pc.rect(10, 6 + sway, 2, 1, BARK);
+    pc.px(12, 5 + sway, LEAF);
+    // roots
+    pc.px(6, 13, BARK_D);
+    pc.px(9, 13, BARK_D);
+    pc.outline(OUT as string);
+  }
+  pc.commit(scene);
+  registerWobble(scene, key, 4);
+}
+
+/** Mushroom creature (myconid), palette-swappable. */
+function mushroomSprite(scene: Phaser.Scene, key: string, paletteName: string): void {
+  const [, OUT, CAP_D, CAP, CAP_H, STALK, SPOT] = PALETTES[paletteName];
+  const pc = new PixelCanvas(scene, key, 16, 16, 2);
+  for (let f = 0; f < 2; f++) {
+    pc.frame(f);
+    const top = 3 + f;
+    pc.rect(3, top, 10, 4, CAP);
+    pc.rect(4, top - 1, 8, 1, CAP);
+    pc.rect(3, top, 10, 1, CAP_H);
+    pc.rect(3, top + 3, 10, 1, CAP_D);
+    pc.px(5, top + 1, SPOT);
+    pc.px(9, top + 1, SPOT);
+    pc.px(7, top + 2, SPOT);
+    pc.rect(6, top + 4, 4, 6, STALK);
+    pc.px(6, top + 6, OUT as string);
+    pc.px(9, top + 6, OUT as string);
+    pc.outline(OUT as string);
+  }
+  pc.commit(scene);
+  registerWobble(scene, key, 4);
+}
+
+/** Rocky golem variant (magma-colossus), palette-swappable. */
+function golemVariant(scene: Phaser.Scene, key: string, paletteName: string): void {
+  const [, OUT, ROCK_D, ROCK, ROCK_H, ROCK_T, EYE] = PALETTES[paletteName];
+  const pc = new PixelCanvas(scene, key, 16, 16, 2);
+  for (let f = 0; f < 2; f++) {
+    pc.frame(f);
+    const sway = f;
+    pc.rect(4, 12, 3, 3, ROCK_D);
+    pc.rect(9, 12, 3, 3, ROCK_D);
+    pc.rect(3, 5, 10, 7, ROCK);
+    pc.rect(3, 5, 10, 1, ROCK_T);
+    pc.px(5, 8, ROCK_D);
+    pc.px(10, 9, ROCK_D);
+    pc.rect(2, 5 + sway, 2, 3, ROCK_H);
+    pc.rect(12, 5 + sway, 2, 3, ROCK_H);
+    pc.rect(6, 2, 4, 3, ROCK);
+    pc.px(6, 3, EYE);
+    pc.px(9, 3, EYE);
+    pc.outline(OUT as string);
+  }
+  pc.commit(scene);
+  registerWobble(scene, key, 4);
+}
+
+/** A toxic slime variant (spore), reusing the slime body shape. */
+function slimeVariant(scene: Phaser.Scene, key: string, paletteName: string, rate: number): void {
+  const pc = new PixelCanvas(scene, key, 16, 16, 2);
+  for (let f = 0; f < 2; f++) {
+    pc.frame(f);
+    drawSlimeBody(pc, f, PALETTES[paletteName]);
+  }
+  pc.commit(scene);
+  registerWobble(scene, key, rate);
+}
+
 /** The 32x32 boss silhouette, palette-swapped per boss. */
 function generateBossSprite(scene: Phaser.Scene, key: string, paletteName: string): void {
   const [, OUT, ARM_D, ARM, ARM_H, CLOAK_D, CLOAK, GLOW, GOLD] = PALETTES[paletteName];
@@ -299,7 +521,28 @@ export function generateAllEnemies(scene: Phaser.Scene): void {
   generateWisp(scene);
   generateGolem(scene);
   generateBrute(scene);
+
+  // Stage-themed regular enemies.
+  beastSprite(scene, 'wolf', 'wolf');
+  sprigganSprite(scene, 'spriggan', 'spriggan');
+  mushroomSprite(scene, 'myconid', 'myconid');
+  slimeVariant(scene, 'spore', 'spore', 6);
+  undeadSprite(scene, 'ghoul', 'ghoul');
+  ghostSprite(scene, 'wraith', 'wraith');
+  knightSprite(scene, 'boneknight', 'boneknight');
+  batVariant(scene, 'imp', 'imp');
+  ghostSprite(scene, 'cinder', 'cinder');
+
+  // Elite champions (unique per stage).
+  sprigganSprite(scene, 'thornback', 'thornback');
+  knightSprite(scene, 'bone-colossus', 'bone-colossus');
+  golemVariant(scene, 'magma-colossus', 'magma-colossus');
+
+  // Bosses.
   generateBossSprite(scene, 'boss', 'boss');
   generateBossSprite(scene, 'boss-warlock', 'boss_warlock');
   generateBossSprite(scene, 'boss-behemoth', 'boss_behemoth');
+  generateBossSprite(scene, 'boss-moon', 'boss_moon');
+  generateBossSprite(scene, 'boss-warden', 'boss_warden');
+  generateBossSprite(scene, 'boss-tyrant', 'boss_tyrant');
 }
