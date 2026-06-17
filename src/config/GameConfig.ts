@@ -2,6 +2,12 @@
  * Central tunable constants for the whole game. Keeping these in one place makes
  * balancing and resizing easy without hunting through systems.
  */
+
+/** Build version shown on the title + settings (bump on release). */
+export const VERSION = '0.9.0';
+/** Short credit line for the About panel. */
+export const CREDITS = 'A Nightfall Survivors build. Art & audio generated procedurally with Phaser 3.';
+
 export const GAME = {
   /** Internal render resolution. The canvas scales to fit the window. */
   width: 960,

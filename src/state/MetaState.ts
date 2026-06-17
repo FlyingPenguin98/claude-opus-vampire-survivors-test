@@ -15,6 +15,10 @@ export interface MetaSettings {
   sfx: number;
   muted: boolean;
   showDamage: boolean;
+  /** Tone down screen shake / camera motion for comfort & photosensitivity. */
+  reducedMotion: boolean;
+  /** Vibration feedback on mobile. */
+  haptics: boolean;
   /** Last-selected difficulty id, remembered on the prepare screen. */
   lastDifficulty?: string;
 }
@@ -42,7 +46,7 @@ function defaults(): MetaData {
     powerups: {},
     unlocked: [],
     achievements: [],
-    settings: { master: 0.7, music: 0.45, sfx: 0.7, muted: false, showDamage: true, lastDifficulty: 'normal' },
+    settings: { master: 0.7, music: 0.45, sfx: 0.7, muted: false, showDamage: true, reducedMotion: false, haptics: true, lastDifficulty: 'normal' },
     bestPerStage: {},
   };
 }
@@ -95,6 +99,17 @@ export const MetaState = {
   },
 
   save,
+
+  /** Wipe all saved progress (returns fresh defaults). */
+  reset(): MetaData {
+    try {
+      localStorage.removeItem(KEY);
+      localStorage.removeItem(KEY_V1);
+    } catch {
+      /* ignore */
+    }
+    return defaults();
+  },
 
   isUnlocked(id: string): boolean {
     return load().unlocked.includes(id);

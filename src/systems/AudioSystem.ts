@@ -11,7 +11,7 @@ class Audio {
   private master!: GainNode;
   private musicGain!: GainNode;
   private sfxGain!: GainNode;
-  private settings: MetaSettings = { master: 0.7, music: 0.45, sfx: 0.7, muted: false, showDamage: true };
+  private settings: MetaSettings = { master: 0.7, music: 0.45, sfx: 0.7, muted: false, showDamage: true, reducedMotion: false, haptics: true };
   private musicTimer?: number;
   private step = 0;
   private lastHit = 0;

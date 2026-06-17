@@ -16,6 +16,7 @@ import { XPSystem } from '../systems/XPSystem';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
 import { Spawner } from '../systems/Spawner';
 import { AudioSystem } from '../systems/AudioSystem';
+import { Haptics } from '../util/Haptics';
 import { WEAPONS } from '../data/weapons';
 import { POWERUPS } from '../data/powerups';
 import { CHARACTERS, DEFAULT_CHARACTER } from '../data/characters';
@@ -103,6 +104,7 @@ export class GameScene extends Phaser.Scene {
 
     AudioSystem.configure(this.meta.settings);
     AudioSystem.unlock();
+    Haptics.configure(this.meta.settings.haptics);
 
     this.run = new RunState();
     this.applyMeta();
@@ -159,7 +161,7 @@ export class GameScene extends Phaser.Scene {
       allEnemies: () => this.enemies.getChildren() as Enemy[],
       nearestEnemyTo: (x, y, exclude) => this.nearestEnemyTo(x, y, exclude),
       aoeDamage: (x, y, r, dmg, opts) => this.aoeDamage(x, y, r, dmg, opts),
-      cameraShake: (d, i) => this.cameras.main.shake(d, i),
+      cameraShake: (d, i) => this.shake(d, i),
       audio: AudioSystem,
     });
     this.weapons.addWeapon(this.character.startingWeapon);
@@ -379,6 +381,11 @@ export class GameScene extends Phaser.Scene {
     dn.spawn(x, y, amount, crit, color);
   }
 
+  /** Camera shake gated by the Reduced Motion accessibility setting. */
+  private shake(duration: number, intensity: number): void {
+    if (!this.meta.settings.reducedMotion) this.cameras.main.shake(duration, intensity);
+  }
+
   /** Nearest active enemy to a point, optionally excluding some (e.g. already hit). */
   private nearestEnemyTo(x: number, y: number, exclude?: Set<Enemy>): Enemy | null {
     let best: Enemy | null = null;
@@ -491,7 +498,8 @@ export class GameScene extends Phaser.Scene {
     const scaled = raw * this.difficulty.enemyDmgMult;
     const dmg = Math.max(1, scaled - this.run.armor);
     this.run.hp -= dmg;
-    this.cameras.main.shake(120, 0.006);
+    this.shake(120, 0.006);
+    Haptics.vibrate(30);
     AudioSystem.hurt();
     this.events.emit(EVENTS.HP_CHANGED, Math.max(0, this.run.hp), this.run.maxHp);
     if (this.run.hp <= 0) this.handleFatal();
@@ -579,6 +587,7 @@ export class GameScene extends Phaser.Scene {
   onUpgradePicked(choice: UpgradeChoice): void {
     this.upgrades.apply(choice);
     this.processingReward = false;
+    Haptics.vibrate(15);
 
     if (choice.kind === 'passive' || choice.kind === 'heal') {
       const existing = this.run.passives.get(choice.id);
@@ -598,7 +607,8 @@ export class GameScene extends Phaser.Scene {
     this.boss = boss;
     this.spawner.setBossActive(true);
     this.events.emit(EVENTS.BOSS_SPAWNED, boss.def.name ?? 'BOSS');
-    this.cameras.main.shake(400, 0.01);
+    this.shake(400, 0.01);
+    Haptics.vibrate([0, 60, 40, 60]);
     AudioSystem.bossSpawn();
   }
 
@@ -609,7 +619,8 @@ export class GameScene extends Phaser.Scene {
     this.gameOver = true;
     this.player.setVelocity(0, 0);
     this.physics.pause();
-    this.cameras.main.shake(350, 0.012);
+    this.shake(350, 0.012);
+    Haptics.vibrate(victory ? [0, 80, 60, 120] : 200);
     this.events.emit(EVENTS.PLAYER_DIED);
     if (victory) AudioSystem.levelUp();
     else AudioSystem.death();

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME } from '../config/GameConfig';
+import { GAME, VERSION } from '../config/GameConfig';
 import { MetaState } from '../state/MetaState';
 import { AudioSystem } from '../systems/AudioSystem';
 
@@ -58,10 +58,11 @@ export class TitleScene extends Phaser.Scene {
     this.items = [
       { label: 'BEGIN', color: '#46d873', size: 28, action: () => this.start() },
       { label: 'Powerups', color: '#f2c14e', size: 22, action: () => this.scene.start('ShopScene') },
+      { label: 'Achievements', color: '#cf9aff', size: 22, action: () => this.scene.start('AchievementsScene') },
       { label: 'Settings', color: '#6ad8ff', size: 22, action: () => this.scene.start('SettingsScene', { from: 'title' }) },
     ];
-    const baseY = height * 0.6;
-    const gap = 46;
+    const baseY = height * 0.57;
+    const gap = 42;
     this.items.forEach((item, i) => {
       const t = this.add
         .text(width / 2, baseY + i * gap, item.label, {
@@ -84,6 +85,12 @@ export class TitleScene extends Phaser.Scene {
     this.arrow = this.add
       .text(0, 0, '▶', { fontFamily: 'Georgia, serif', fontSize: '24px', color: '#ffffff' })
       .setOrigin(0.5);
+
+    this.add
+      .text(width - 8, height - 6, VERSION, {
+        fontFamily: 'Courier New, monospace', fontSize: '11px', color: '#5a607a',
+      })
+      .setOrigin(1, 1);
 
     // Keyboard navigation.
     const kb = this.input.keyboard;

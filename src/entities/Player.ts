@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME, PLAYER } from '../config/GameConfig';
 import { AudioSystem } from '../systems/AudioSystem';
+import { Haptics } from '../util/Haptics';
 import type { RunState } from '../state/RunState';
 
 /**
@@ -116,6 +117,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     else if (d.x > 0) this.setFlipX(false);
     this.scene.tweens.add({ targets: this, alpha: 0.4, yoyo: true, duration: PLAYER.dashDurationMs / 2, onComplete: () => this.setAlpha(1) });
     AudioSystem.dash();
+    Haptics.vibrate(20);
   }
 
   preUpdate(time: number, delta: number): void {

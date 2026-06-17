@@ -47,4 +47,52 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     check: (s) => s.victory,
     unlocks: ['stage-wastes'],
   },
+  {
+    id: 'ach-level10',
+    name: 'Adept',
+    description: 'Reach level 10 in a run.',
+    check: (s) => s.level >= 10,
+  },
+  {
+    id: 'ach-kills250',
+    name: 'Cleaver',
+    description: 'Slay 250 enemies in one run.',
+    check: (s) => s.kills >= 250,
+  },
+  {
+    id: 'ach-twobosses',
+    name: 'Boss Hunter',
+    description: 'Defeat 2 bosses in one run.',
+    check: (s) => s.bossKills >= 2,
+  },
+  {
+    id: 'ach-gold400',
+    name: 'Treasure Hunter',
+    description: 'Collect 400 gold in one run.',
+    check: (s) => s.gold >= 400,
+  },
+  {
+    id: 'ach-survive8',
+    name: 'Night Owl',
+    description: 'Survive for 8 minutes.',
+    check: (s) => s.timeSec >= 480,
+  },
+  {
+    id: 'ach-explorer',
+    name: 'Wanderer',
+    description: 'Play all three stages.',
+    check: (_s, meta) => Object.keys(meta.bestPerStage).length >= 3,
+  },
+  {
+    id: 'ach-veteran',
+    name: 'Veteran',
+    description: 'Finish 10 runs.',
+    check: (_s, meta) => meta.runs >= 10,
+  },
+  {
+    id: 'ach-rich',
+    name: 'Hoarder',
+    description: 'Earn 2000 lifetime gold.',
+    check: (_s, meta) => meta.totalGold >= 2000,
+  },
 ];
