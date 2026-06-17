@@ -34,6 +34,10 @@ export interface MetaData {
   achievements: string[];
   settings: MetaSettings;
   bestPerStage: Record<string, number>;
+  /** Lifetime totals across all runs. */
+  totalKills: number;
+  totalBossKills: number;
+  bestLevel: number;
 }
 
 function defaults(): MetaData {
@@ -48,6 +52,9 @@ function defaults(): MetaData {
     achievements: [],
     settings: { master: 0.7, music: 0.45, sfx: 0.7, muted: false, showDamage: true, reducedMotion: false, haptics: true, lastDifficulty: 'normal' },
     bestPerStage: {},
+    totalKills: 0,
+    totalBossKills: 0,
+    bestLevel: 0,
   };
 }
 
@@ -143,6 +150,9 @@ export const MetaState = {
     data.totalGold += summary.gold;
     data.spendableGold += summary.gold;
     data.runs += 1;
+    data.totalKills += summary.kills;
+    data.totalBossKills += summary.bossKills;
+    if (summary.level > data.bestLevel) data.bestLevel = summary.level;
     if (summary.timeSec > data.bestTimeSec) data.bestTimeSec = summary.timeSec;
     const prevStageBest = data.bestPerStage[summary.stageId] ?? 0;
     if (summary.timeSec > prevStageBest) data.bestPerStage[summary.stageId] = summary.timeSec;

@@ -16,6 +16,18 @@ class Audio {
   private step = 0;
   private lastHit = 0;
   private hitVoices = 0;
+  private trackName = 'calm';
+
+  /** Procedural music tracks: arpeggio pattern + bass, tempo, and timbre. */
+  private readonly tracks: Record<
+    string,
+    { pattern: number[]; bass: number[]; stepMs: number; wave: OscillatorType }
+  > = {
+    calm: { pattern: [220, 261.6, 329.6, 392, 329.6, 261.6, 196, 261.6], bass: [55, 55, 49, 49, 44, 44, 49, 55], stepMs: 320, wave: 'triangle' },
+    eerie: { pattern: [196, 233, 294, 233, 311, 294, 233, 196], bass: [49, 49, 46, 46, 41, 41, 46, 49], stepMs: 360, wave: 'triangle' },
+    intense: { pattern: [262, 330, 392, 523, 440, 392, 330, 294], bass: [65.4, 65.4, 73.4, 73.4, 49, 49, 55, 55], stepMs: 240, wave: 'triangle' },
+    boss: { pattern: [233, 277, 233, 311, 247, 294, 233, 220], bass: [43.6, 43.6, 46.2, 41.2, 38.9, 41.2, 43.6, 46.2], stepMs: 220, wave: 'sawtooth' },
+  };
 
   configure(settings: MetaSettings): void {
     this.settings = { ...settings };
@@ -38,7 +50,7 @@ class Audio {
     this.sfxGain.connect(this.master);
     this.master.connect(this.ctx.destination);
     this.applyVolumes();
-    this.startMusic();
+    this.scheduleMusic();
   }
 
   /** Suspend audio when the app is backgrounded (saves CPU/battery, avoids desync). */
@@ -164,22 +176,31 @@ class Audio {
     this.noise(0.1, 0.06, 1600);
   }
 
-  // --- Music: a slow minor arpeggio loop. ---
+  // --- Music: per-context arpeggio loops (calm / eerie / intense / boss). ---
 
-  private startMusic(): void {
-    if (this.musicTimer) return;
-    // A natural-minor-ish pattern (Hz). Two octaves, gentle.
-    const pattern = [220, 261.6, 329.6, 392, 329.6, 261.6, 196, 261.6];
-    const bass = [55, 55, 49, 49, 44, 44, 49, 55];
+  /** Switch the looping background track (e.g. per stage, or to the boss theme). */
+  setTrack(name: string): void {
+    if (name === this.trackName || !this.tracks[name]) return;
+    this.trackName = name;
+    this.step = 0;
+    if (this.ctx) this.scheduleMusic();
+  }
+
+  private scheduleMusic(): void {
+    if (this.musicTimer) {
+      clearInterval(this.musicTimer);
+      this.musicTimer = undefined;
+    }
+    const t = this.tracks[this.trackName] ?? this.tracks.calm;
     this.musicTimer = window.setInterval(() => {
       if (!this.ctx || this.ctx.state !== 'running') return;
-      const n = pattern[this.step % pattern.length];
-      this.blip(n, 0.32, 'triangle', this.musicGain, 0.12);
+      const n = t.pattern[this.step % t.pattern.length];
+      this.blip(n, t.stepMs / 1000 + 0.02, t.wave, this.musicGain, 0.12);
       if (this.step % 2 === 0) {
-        this.blip(bass[this.step % bass.length], 0.5, 'sine', this.musicGain, 0.16);
+        this.blip(t.bass[this.step % t.bass.length], 0.5, 'sine', this.musicGain, 0.16);
       }
       this.step++;
-    }, 300);
+    }, t.stepMs);
   }
 }
 

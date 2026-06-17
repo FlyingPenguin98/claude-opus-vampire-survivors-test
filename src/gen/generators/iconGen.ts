@@ -149,6 +149,18 @@ export function generateIcons(scene: Phaser.Scene): void {
   st.rect(9, 7, 2, 3, '#ffe23a');
   st.outline('#21161f');
   st.commit(scene);
+
+  // Keen Edge (crit): a targeting reticle — distinct from the Throwing Knives sprite.
+  const cr = new PixelCanvas(scene, 'icon-crit', 16, 16, 1);
+  ringPixels(cr, 8, 8, 6, '#f2c14e'); // gold ring
+  // red crosshair ticks
+  cr.px(8, 1, '#ff5a5a'); cr.px(8, 2, '#ff5a5a');
+  cr.px(8, 13, '#ff5a5a'); cr.px(8, 14, '#ff5a5a');
+  cr.px(1, 8, '#ff5a5a'); cr.px(2, 8, '#ff5a5a');
+  cr.px(13, 8, '#ff5a5a'); cr.px(14, 8, '#ff5a5a');
+  cr.px(8, 8, '#ff5a5a'); // center dot
+  cr.outline('#3a1010');
+  cr.commit(scene);
 }
 
 /** Plot a 1px-thick ring of palette colour on a PixelCanvas. */

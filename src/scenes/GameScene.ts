@@ -36,6 +36,9 @@ import type { MetaData } from '../state/MetaState';
 
 type Reward = 'levelup' | 'chest';
 
+/** Background music track per stage (boss theme swaps in while a boss is alive). */
+const MUSIC_BY_STAGE: Record<string, string> = { meadow: 'calm', crypt: 'eerie', wastes: 'intense' };
+
 /**
  * The core simulation: owns the world, the player, all entity pools, and every
  * gameplay system. Parameterized by a RunConfig (character + stage + meta). Routes
@@ -72,6 +75,9 @@ export class GameScene extends Phaser.Scene {
   /** Current boss enemy, exposed so the UI can render its health bar. */
   boss?: Enemy;
 
+  /** Current stage's background music track (restored after a boss dies). */
+  private musicTrack = 'calm';
+
   // Virtual joystick (touch movement).
   private joyActive = false;
   private joyId = -1;
@@ -105,6 +111,8 @@ export class GameScene extends Phaser.Scene {
     AudioSystem.configure(this.meta.settings);
     AudioSystem.unlock();
     Haptics.configure(this.meta.settings.haptics);
+    this.musicTrack = MUSIC_BY_STAGE[this.stage.id] ?? 'calm';
+    AudioSystem.setTrack(this.musicTrack);
 
     this.run = new RunState();
     this.applyMeta();
@@ -443,6 +451,7 @@ export class GameScene extends Phaser.Scene {
       this.run.bossKills += 1;
       this.boss = undefined;
       this.spawner.setBossActive(false);
+      AudioSystem.setTrack(this.musicTrack);
       this.events.emit(EVENTS.BOSS_DIED);
       this.cameras.main.flash(300, 255, 220, 120);
       this.spawnChest(x, y);
@@ -607,6 +616,7 @@ export class GameScene extends Phaser.Scene {
     this.boss = boss;
     this.spawner.setBossActive(true);
     this.events.emit(EVENTS.BOSS_SPAWNED, boss.def.name ?? 'BOSS');
+    AudioSystem.setTrack('boss');
     this.shake(400, 0.01);
     Haptics.vibrate([0, 60, 40, 60]);
     AudioSystem.bossSpawn();

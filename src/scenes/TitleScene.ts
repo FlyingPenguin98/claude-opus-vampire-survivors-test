@@ -28,6 +28,7 @@ export class TitleScene extends Phaser.Scene {
 
     const meta = MetaState.get();
     AudioSystem.configure(meta.settings);
+    AudioSystem.setTrack('calm');
     this.input.once('pointerdown', () => AudioSystem.unlock());
     this.input.keyboard?.once('keydown', () => AudioSystem.unlock());
 
@@ -59,10 +60,11 @@ export class TitleScene extends Phaser.Scene {
       { label: 'BEGIN', color: '#46d873', size: 28, action: () => this.start() },
       { label: 'Powerups', color: '#f2c14e', size: 22, action: () => this.scene.start('ShopScene') },
       { label: 'Achievements', color: '#cf9aff', size: 22, action: () => this.scene.start('AchievementsScene') },
+      { label: 'Stats', color: '#8af0c0', size: 22, action: () => this.scene.start('StatsScene') },
       { label: 'Settings', color: '#6ad8ff', size: 22, action: () => this.scene.start('SettingsScene', { from: 'title' }) },
     ];
-    const baseY = height * 0.57;
-    const gap = 42;
+    const baseY = height * 0.54;
+    const gap = 40;
     this.items.forEach((item, i) => {
       const t = this.add
         .text(width / 2, baseY + i * gap, item.label, {

@@ -89,7 +89,7 @@ export const PASSIVE_UPGRADES: UpgradeChoice[] = [
     id: 'passive-crit',
     name: 'Keen Edge',
     description: '+8% critical hit chance.',
-    icon: 'knife',
+    icon: 'icon-crit',
     kind: 'passive',
     badge: 'Passive',
     apply: (run) => {

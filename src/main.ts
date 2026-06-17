@@ -8,6 +8,7 @@ import { CharacterSelectScene } from './scenes/CharacterSelectScene';
 import { ShopScene } from './scenes/ShopScene';
 import { SettingsScene } from './scenes/SettingsScene';
 import { AchievementsScene } from './scenes/AchievementsScene';
+import { StatsScene } from './scenes/StatsScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
 import { LevelUpScene } from './scenes/LevelUpScene';
@@ -45,6 +46,7 @@ const config: Phaser.Types.Core.GameConfig = {
     ShopScene,
     SettingsScene,
     AchievementsScene,
+    StatsScene,
     GameScene,
     UIScene,
     LevelUpScene,
