@@ -18,15 +18,52 @@ class Audio {
   private hitVoices = 0;
   private trackName = 'calm';
 
-  /** Procedural music tracks: arpeggio pattern + bass, tempo, and timbre. */
+  /**
+   * Procedural music tracks: a long arpeggio melody (0 = rest) over a bass line,
+   * with tempo + timbre. The melodies are 32 steps and the bass 16, so the two
+   * phase against each other — the loop only fully repeats every ~64 steps
+   * (≈15-20s), which reads far less repetitively than the old 8-step loop.
+   */
   private readonly tracks: Record<
     string,
     { pattern: number[]; bass: number[]; stepMs: number; wave: OscillatorType }
   > = {
-    calm: { pattern: [220, 261.6, 329.6, 392, 329.6, 261.6, 196, 261.6], bass: [55, 55, 49, 49, 44, 44, 49, 55], stepMs: 320, wave: 'triangle' },
-    eerie: { pattern: [196, 233, 294, 233, 311, 294, 233, 196], bass: [49, 49, 46, 46, 41, 41, 46, 49], stepMs: 360, wave: 'triangle' },
-    intense: { pattern: [262, 330, 392, 523, 440, 392, 330, 294], bass: [65.4, 65.4, 73.4, 73.4, 49, 49, 55, 55], stepMs: 240, wave: 'triangle' },
-    boss: { pattern: [233, 277, 233, 311, 247, 294, 233, 220], bass: [43.6, 43.6, 46.2, 41.2, 38.9, 41.2, 43.6, 46.2], stepMs: 220, wave: 'sawtooth' },
+    calm: {
+      pattern: [
+        220, 0, 261.6, 329.6, 392, 0, 329.6, 261.6, 246.9, 0, 293.7, 349.2, 329.6, 0, 261.6, 0,
+        196, 0, 246.9, 293.7, 329.6, 0, 392, 293.7, 261.6, 0, 329.6, 392, 440, 0, 392, 329.6,
+      ],
+      bass: [110, 0, 98, 0, 87.3, 0, 98, 0, 73.4, 0, 82.4, 0, 98, 0, 110, 0],
+      stepMs: 300,
+      wave: 'triangle',
+    },
+    eerie: {
+      pattern: [
+        174.6, 0, 207.7, 0, 233, 0, 207.7, 174.6, 155.6, 0, 196, 233, 207.7, 0, 174.6, 0,
+        138.6, 0, 174.6, 207.7, 233, 0, 277.2, 233, 207.7, 0, 196, 174.6, 155.6, 0, 146.8, 0,
+      ],
+      bass: [87.3, 0, 82.4, 0, 77.8, 0, 82.4, 0, 69.3, 0, 73.4, 0, 82.4, 0, 87.3, 0],
+      stepMs: 345,
+      wave: 'triangle',
+    },
+    intense: {
+      pattern: [
+        262, 330, 392, 523, 440, 392, 330, 392, 523, 440, 392, 330, 294, 330, 392, 440,
+        349, 440, 523, 659, 587, 523, 440, 523, 392, 440, 523, 392, 330, 392, 440, 523,
+      ],
+      bass: [65.4, 65.4, 73.4, 73.4, 87.3, 87.3, 73.4, 65.4, 98, 98, 87.3, 87.3, 73.4, 73.4, 65.4, 65.4],
+      stepMs: 225,
+      wave: 'triangle',
+    },
+    boss: {
+      pattern: [
+        233, 277, 233, 311, 247, 294, 233, 220, 311, 277, 233, 311, 349, 311, 277, 233,
+        220, 261.6, 220, 293.7, 246.9, 277, 233, 220, 311, 349, 311, 277, 233, 220, 207.7, 233,
+      ],
+      bass: [43.6, 43.6, 46.2, 41.2, 38.9, 41.2, 43.6, 46.2, 49, 49, 46.2, 43.6, 41.2, 38.9, 41.2, 43.6],
+      stepMs: 215,
+      wave: 'sawtooth',
+    },
   };
 
   configure(settings: MetaSettings): void {
@@ -119,15 +156,42 @@ class Audio {
 
   // --- SFX ---
 
-  hit(): void {
+  /**
+   * Impact sound, varied so weapons feel distinct: bigger hits read lower/punchier,
+   * small rapid hits read as high ticks, elemental infusions have their own timbre,
+   * and crits add a bright sparkle. Throttled so a swarm doesn't clip.
+   */
+  hit(damage = 10, element?: string, crit = false): void {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
-    // Throttle the high-frequency hit sound so a swarm doesn't clip.
-    if (now - this.lastHit < 0.04 || this.hitVoices > 6) return;
+    if (now - this.lastHit < 0.035 || this.hitVoices > 7) return;
     this.lastHit = now;
     this.hitVoices++;
-    setTimeout(() => (this.hitVoices = Math.max(0, this.hitVoices - 1)), 60);
-    this.noise(0.05, 0.18, 1200);
+    setTimeout(() => (this.hitVoices = Math.max(0, this.hitVoices - 1)), 55);
+
+    const base = Math.max(180, 900 - damage * 6);
+    switch (element) {
+      case 'frost':
+        this.blip(base * 1.4, 0.09, 'triangle', this.sfxGain, 0.12, base * 1.05);
+        break;
+      case 'flame':
+        this.noise(0.06, 0.14, 900);
+        this.blip(base * 0.7, 0.08, 'sawtooth', this.sfxGain, 0.08, base * 0.5);
+        break;
+      case 'venom':
+        this.blip(base * 0.6, 0.12, 'square', this.sfxGain, 0.1, base * 0.42);
+        break;
+      case 'shadow':
+        this.blip(base * 0.5, 0.14, 'sawtooth', this.sfxGain, 0.1, base * 0.35);
+        break;
+      case 'holy':
+        this.blip(base * 1.6, 0.08, 'triangle', this.sfxGain, 0.11, base * 2.0);
+        break;
+      default:
+        this.noise(0.045, 0.14, Math.max(500, base + 200));
+        if (damage >= 22) this.blip(base * 0.7, 0.1, 'square', this.sfxGain, 0.1, base * 0.45);
+    }
+    if (crit) this.blip(1400, 0.07, 'square', this.sfxGain, 0.12, 1900);
   }
 
   kill(): void {
@@ -195,9 +259,10 @@ class Audio {
     this.musicTimer = window.setInterval(() => {
       if (!this.ctx || this.ctx.state !== 'running') return;
       const n = t.pattern[this.step % t.pattern.length];
-      this.blip(n, t.stepMs / 1000 + 0.02, t.wave, this.musicGain, 0.12);
+      if (n > 0) this.blip(n, t.stepMs / 1000 + 0.02, t.wave, this.musicGain, 0.12);
       if (this.step % 2 === 0) {
-        this.blip(t.bass[this.step % t.bass.length], 0.5, 'sine', this.musicGain, 0.16);
+        const b = t.bass[Math.floor(this.step / 2) % t.bass.length];
+        if (b > 0) this.blip(b, 0.5, 'sine', this.musicGain, 0.16);
       }
       this.step++;
     }, t.stepMs);

@@ -8,6 +8,15 @@ import type { WeaponSystem } from './WeaponSystem';
 /** Maximum distinct weapons a player can carry before only level-ups are offered. */
 const MAX_WEAPONS = 6;
 
+/** Highlight colour per elemental infusion, used to make infusion upgrades pop. */
+const ELEMENT_HEX: Record<string, string> = {
+  frost: '#9fe8ff',
+  flame: '#ff8a3a',
+  venom: '#8aff5a',
+  shadow: '#c08aff',
+  holy: '#fff0a0',
+};
+
 /**
  * Builds the level-up choice list. For each owned, non-maxed weapon it rolls a
  * RANDOM upgrade from that weapon's pool, so the same weapon offers different
@@ -41,6 +50,7 @@ export class UpgradeSystem {
       if (available.length === 0) continue;
       const mod = weightedSample(available, 1, (m) => m.weight ?? 1)[0];
       const nextLevel = inst.level + 1;
+      const accent = mod.element ? ELEMENT_HEX[mod.element] : undefined;
       add(
         {
           id: `weaponLevel-${id}-${mod.id}`,
@@ -49,6 +59,8 @@ export class UpgradeSystem {
           icon: inst.def.textureKey,
           kind: 'weaponLevel',
           badge: `Lv ${nextLevel}`,
+          accent,
+          tag: accent ? '✦ ELEMENTAL INFUSION' : undefined,
           apply: (_run, weapons) => weapons.applyMod(id, mod.id),
         },
         1.4

@@ -149,6 +149,9 @@ export interface UpgradeChoice {
   kind: UpgradeKind;
   /** Short tag like "New!", "Lv 3", "Passive". */
   badge: string;
+  /** Optional highlight colour + tag for special upgrades (e.g. elemental infusions). */
+  accent?: string;
+  tag?: string;
   apply: (run: RunState, weapons: WeaponSystem) => void;
 }
 

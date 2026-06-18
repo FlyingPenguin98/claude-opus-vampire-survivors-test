@@ -344,7 +344,7 @@ export class GameScene extends Phaser.Scene {
     dmg = Math.max(1, Math.round(dmg));
     const dead = enemy.damage(dmg, opts.dot ? undefined : opts.fromX, opts.dot ? undefined : opts.fromY);
     if (this.meta.settings.showDamage) this.popDamage(enemy.x, enemy.y, dmg, crit, opts.color);
-    if (!opts.dot) AudioSystem.hit();
+    if (!opts.dot) AudioSystem.hit(dmg, opts.element, crit);
     if (opts.element && !opts.dot && !dead) this.applyElement(enemy, opts.element, amount);
     if (dead) this.killEnemy(enemy);
   }

@@ -77,10 +77,11 @@ export class LevelUpScene extends Phaser.Scene {
   ): void {
     const h = 240;
     const container = this.add.container(x, y);
+    const accentInt = choice.accent ? parseInt(choice.accent.slice(1), 16) : 0x3f6fc0;
 
     const bg = this.add
       .rectangle(0, 0, w, h, 0x1a1726)
-      .setStrokeStyle(3, 0x3f6fc0)
+      .setStrokeStyle(choice.accent ? 4 : 3, accentInt)
       .setOrigin(0.5);
 
     const badge = this.add
@@ -96,7 +97,7 @@ export class LevelUpScene extends Phaser.Scene {
       .setScale(GAME.spriteScale * 1.6);
 
     const name = this.add
-      .text(0, -10, choice.name, {
+      .text(0, -12, choice.name, {
         fontFamily: 'Georgia, serif',
         fontSize: '20px',
         color: '#ffffff',
@@ -105,11 +106,25 @@ export class LevelUpScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    // Optional emphasis tag (e.g. elemental infusion) in the accent colour.
+    const extras: Phaser.GameObjects.GameObject[] = [];
+    if (choice.tag) {
+      extras.push(
+        this.add
+          .text(0, 18, choice.tag, {
+            fontFamily: 'Courier New, monospace',
+            fontSize: '12px',
+            color: choice.accent ?? '#f2c14e',
+          })
+          .setOrigin(0.5)
+      );
+    }
+
     const desc = this.add
-      .text(0, 50, choice.description, {
+      .text(0, choice.tag ? 42 : 50, choice.description, {
         fontFamily: 'Courier New, monospace',
         fontSize: '13px',
-        color: '#aab0c4',
+        color: choice.accent ?? '#c8cee0',
         align: 'center',
         wordWrap: { width: w - 28 },
       })
@@ -123,7 +138,7 @@ export class LevelUpScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    container.add([bg, badge, icon, name, desc, key]);
+    container.add([bg, badge, icon, name, ...extras, desc, key]);
     container.setSize(w, h);
     // Padded hit area for forgiving touch taps.
     container.setInteractive(
