@@ -41,30 +41,31 @@ export class TitleScene extends Phaser.Scene {
       .setAlpha(0.5);
     this.add.rectangle(0, 0, width, height, 0x10101c, 0.55).setOrigin(0);
 
-    const hero = this.add.sprite(width / 2, height * 0.4, 'player').setScale(GAME.spriteScale * 3);
+    const hero = this.add.sprite(width / 2, height * 0.34, 'player').setScale(GAME.spriteScale * 2);
     hero.play('player-idle');
 
     this.add
-      .text(width / 2, height * 0.18, 'NIGHTFALL', {
-        fontFamily: 'Georgia, serif', fontSize: '64px', color: '#f2c14e', stroke: '#21161f', strokeThickness: 8,
+      .text(width / 2, height * 0.12, 'NIGHTFALL', {
+        fontFamily: 'Georgia, serif', fontSize: '60px', color: '#f2c14e', stroke: '#21161f', strokeThickness: 8,
       })
       .setOrigin(0.5);
     this.add
-      .text(width / 2, height * 0.28, 'S U R V I V O R S', {
-        fontFamily: 'Georgia, serif', fontSize: '24px', color: '#cfd6e6', stroke: '#21161f', strokeThickness: 5,
+      .text(width / 2, height * 0.205, 'S U R V I V O R S', {
+        fontFamily: 'Georgia, serif', fontSize: '22px', color: '#cfd6e6', stroke: '#21161f', strokeThickness: 5,
       })
       .setOrigin(0.5);
 
     // --- Menu ---
     this.items = [
-      { label: 'BEGIN', color: '#46d873', size: 28, action: () => this.start() },
-      { label: 'Powerups', color: '#f2c14e', size: 22, action: () => this.scene.start('ShopScene') },
-      { label: 'Achievements', color: '#cf9aff', size: 22, action: () => this.scene.start('AchievementsScene') },
-      { label: 'Stats', color: '#8af0c0', size: 22, action: () => this.scene.start('StatsScene') },
-      { label: 'Settings', color: '#6ad8ff', size: 22, action: () => this.scene.start('SettingsScene', { from: 'title' }) },
+      { label: 'BEGIN', color: '#46d873', size: 26, action: () => this.start() },
+      { label: 'Powerups', color: '#f2c14e', size: 20, action: () => this.scene.start('ShopScene') },
+      { label: 'Codex', color: '#f0b870', size: 20, action: () => this.scene.start('CodexScene') },
+      { label: 'Achievements', color: '#cf9aff', size: 20, action: () => this.scene.start('AchievementsScene') },
+      { label: 'Stats', color: '#8af0c0', size: 20, action: () => this.scene.start('StatsScene') },
+      { label: 'Settings', color: '#6ad8ff', size: 20, action: () => this.scene.start('SettingsScene', { from: 'title' }) },
     ];
-    const baseY = height * 0.54;
-    const gap = 40;
+    const baseY = height * 0.46;
+    const gap = 33;
     this.items.forEach((item, i) => {
       const t = this.add
         .text(width / 2, baseY + i * gap, item.label, {
