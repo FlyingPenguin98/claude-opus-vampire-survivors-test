@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME } from '../config/GameConfig';
+import { SaveState } from '../state/SaveState';
 import type { GameScene } from './GameScene';
 
 interface PauseData {
@@ -143,6 +144,7 @@ export class PauseScene extends Phaser.Scene {
   }
 
   private quit(): void {
+    SaveState.clear(); // explicit abandon — don't offer Continue
     this.scene.stop('SettingsScene');
     this.scene.stop('UIScene');
     this.scene.stop('GameScene');

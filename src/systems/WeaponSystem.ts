@@ -178,4 +178,9 @@ export class WeaponSystem {
   describeLoadout(): { def: WeaponDef; level: number }[] {
     return [...this.owned.values()].map((i) => ({ def: i.def, level: i.level }));
   }
+
+  /** For save/resume: each owned weapon's id and the upgrades it has taken. */
+  getOwned(): { id: string; taken: string[] }[] {
+    return [...this.owned.values()].map((i) => ({ id: i.def.id, taken: [...i.taken] }));
+  }
 }

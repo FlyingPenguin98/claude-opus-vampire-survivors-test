@@ -3,6 +3,7 @@ import { GAME, SPAWN } from '../config/GameConfig';
 import { EVENTS } from '../util/Events';
 import { RunState } from '../state/RunState';
 import { MetaState } from '../state/MetaState';
+import { SaveState, type RunSnapshot } from '../state/SaveState';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 import { Projectile } from '../entities/Projectile';
@@ -86,12 +87,30 @@ export class GameScene extends Phaser.Scene {
   private joyThumb?: Phaser.GameObjects.Arc;
   private readonly joyMax = 55;
 
+  // Mid-run save/resume.
+  private resume = false;
+  private snapshot: RunSnapshot | null = null;
+  private autosaveAccum = 0;
+
   constructor() {
     super('GameScene');
   }
 
-  init(data: Partial<RunConfig>): void {
+  init(data: Partial<RunConfig> & { resume?: boolean }): void {
     this.meta = data.meta ?? MetaState.get();
+    this.resume = false;
+    this.snapshot = null;
+    if (data.resume) {
+      const snap = SaveState.load();
+      if (snap) {
+        this.resume = true;
+        this.snapshot = snap;
+        this.character = CHARACTERS[snap.characterId] ?? CHARACTERS[DEFAULT_CHARACTER];
+        this.stage = STAGES[snap.stageId] ?? STAGES[DEFAULT_STAGE];
+        this.difficulty = DIFFICULTIES[snap.difficultyId] ?? DIFFICULTIES[DEFAULT_DIFFICULTY];
+        return;
+      }
+    }
     this.character = data.character ?? CHARACTERS[DEFAULT_CHARACTER];
     this.stage = data.stage ?? STAGES[DEFAULT_STAGE];
     this.difficulty = data.difficulty ?? DIFFICULTIES[DEFAULT_DIFFICULTY];
@@ -107,18 +126,23 @@ export class GameScene extends Phaser.Scene {
     this.joyActive = false;
     this.joyId = -1;
     this.joyVec.set(0, 0);
+    this.autosaveAccum = 0;
 
     AudioSystem.configure(this.meta.settings);
     AudioSystem.unlock();
     Haptics.configure(this.meta.settings.haptics);
-    this.musicTrack = MUSIC_BY_STAGE[this.stage.id] ?? 'calm';
+    this.musicTrack = this.resume && this.snapshot ? this.snapshot.musicTrack : MUSIC_BY_STAGE[this.stage.id] ?? 'calm';
     AudioSystem.setTrack(this.musicTrack);
 
     this.run = new RunState();
-    this.applyMeta();
-    this.applyCharacter();
-    this.run.xpMult *= this.difficulty.xpMult;
-    this.run.goldMult *= this.difficulty.goldMult;
+    if (this.resume && this.snapshot) {
+      this.restoreRun(this.snapshot);
+    } else {
+      this.applyMeta();
+      this.applyCharacter();
+      this.run.xpMult *= this.difficulty.xpMult;
+      this.run.goldMult *= this.difficulty.goldMult;
+    }
 
     // World + background.
     this.physics.world.setBounds(0, 0, GAME.worldWidth, GAME.worldHeight);
@@ -172,7 +196,6 @@ export class GameScene extends Phaser.Scene {
       cameraShake: (d, i) => this.shake(d, i),
       audio: AudioSystem,
     });
-    this.weapons.addWeapon(this.character.startingWeapon);
     this.upgrades = new UpgradeSystem(this.run, this.weapons);
     this.spawner = new Spawner(
       this,
@@ -183,6 +206,18 @@ export class GameScene extends Phaser.Scene {
       (x, y, tx, ty, def) => this.fireEnemyShot(x, y, tx, ty, def),
       (b) => this.onBossSpawned(b)
     );
+
+    if (this.resume && this.snapshot) {
+      for (const w of this.snapshot.weapons) {
+        this.weapons.addWeapon(w.id);
+        for (const modId of w.taken) this.weapons.applyMod(w.id, modId);
+      }
+      this.spawner.restoreFired(this.snapshot.bossesFired);
+      this.run.elapsed = this.snapshot.elapsed;
+      SaveState.clear(); // consumed; re-saved by autosave/pause during this run
+    } else {
+      this.weapons.addWeapon(this.character.startingWeapon);
+    }
 
     this.setupCollisions();
 
@@ -218,8 +253,52 @@ export class GameScene extends Phaser.Scene {
     this.run.hp = this.run.maxHp;
   }
 
+  /** Restore RunState scalars + passives from a saved snapshot. */
+  private restoreRun(snap: RunSnapshot): void {
+    const r = this.run;
+    const s = snap.run;
+    r.hp = s.hp; r.maxHp = s.maxHp; r.level = s.level; r.xp = s.xp; r.xpToNext = s.xpToNext;
+    r.gold = s.gold; r.kills = s.kills; r.bossKills = s.bossKills;
+    r.moveSpeedMult = s.moveSpeedMult; r.damageMult = s.damageMult; r.cooldownMult = s.cooldownMult;
+    r.pickupRadiusMult = s.pickupRadiusMult; r.areaMult = s.areaMult; r.projectileSpeedMult = s.projectileSpeedMult;
+    r.projectileBonus = s.projectileBonus; r.armor = s.armor; r.critChance = s.critChance; r.critMult = s.critMult;
+    r.xpMult = s.xpMult; r.regenPerSec = s.regenPerSec; r.luck = s.luck; r.goldMult = s.goldMult; r.revives = s.revives;
+    r.passives.clear();
+    for (const p of snap.passives) r.passives.set(p.id, { name: p.name, icon: p.icon, count: p.count });
+  }
+
+  private buildSnapshot(): RunSnapshot {
+    const r = this.run;
+    return {
+      version: 1,
+      characterId: this.character.id,
+      stageId: this.stage.id,
+      difficultyId: this.difficulty.id,
+      elapsed: r.elapsed,
+      musicTrack: this.musicTrack,
+      bossesFired: this.spawner.getFired(),
+      run: {
+        hp: r.hp, maxHp: r.maxHp, level: r.level, xp: r.xp, xpToNext: r.xpToNext,
+        gold: r.gold, kills: r.kills, bossKills: r.bossKills,
+        moveSpeedMult: r.moveSpeedMult, damageMult: r.damageMult, cooldownMult: r.cooldownMult,
+        pickupRadiusMult: r.pickupRadiusMult, areaMult: r.areaMult, projectileSpeedMult: r.projectileSpeedMult,
+        projectileBonus: r.projectileBonus, armor: r.armor, critChance: r.critChance, critMult: r.critMult,
+        xpMult: r.xpMult, regenPerSec: r.regenPerSec, luck: r.luck, goldMult: r.goldMult, revives: r.revives,
+      },
+      passives: [...r.passives.entries()].map(([id, p]) => ({ id, name: p.name, icon: p.icon, count: p.count })),
+      weapons: this.weapons.getOwned(),
+    };
+  }
+
+  /** Persist the current run so it can be continued after backgrounding/closing. */
+  private saveSnapshot(): void {
+    if (this.gameOver) return;
+    SaveState.save(this.buildSnapshot());
+  }
+
   private togglePause(): void {
     if (this.gameOver || this.processingReward || this.scene.isPaused()) return;
+    this.saveSnapshot();
     this.scene.pause();
     this.scene.launch('PauseScene', { gameScene: this });
   }
@@ -627,6 +706,7 @@ export class GameScene extends Phaser.Scene {
   private handleEnd(victory: boolean): void {
     if (this.gameOver) return;
     this.gameOver = true;
+    SaveState.clear(); // run is over — no resume
     this.player.setVelocity(0, 0);
     this.physics.pause();
     this.shake(350, 0.012);
@@ -669,6 +749,13 @@ export class GameScene extends Phaser.Scene {
 
     this.playerPos.set(this.player.x, this.player.y);
     this.run.elapsed += delta / 1000;
+
+    // Periodic autosave so a hard close (no blur) can still be continued.
+    this.autosaveAccum += delta;
+    if (this.autosaveAccum >= 5000) {
+      this.autosaveAccum = 0;
+      this.saveSnapshot();
+    }
 
     this.spawner.update(delta, this.run.elapsed);
     this.weapons.update(time, delta);

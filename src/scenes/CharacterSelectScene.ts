@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME } from '../config/GameConfig';
 import { MetaState } from '../state/MetaState';
+import { SaveState } from '../state/SaveState';
 import { AudioSystem } from '../systems/AudioSystem';
 import { CHARACTERS } from '../data/characters';
 import { STAGES } from '../data/stages';
@@ -201,6 +202,7 @@ export class CharacterSelectScene extends Phaser.Scene {
     if (!character || !stage || !difficulty) return;
     if (!this.unlocked(character.unlockId) || !this.unlocked(stage.unlockId)) return;
     MetaState.setSettings({ lastDifficulty: difficulty.id });
+    SaveState.clear(); // starting fresh abandons any in-progress run
     AudioSystem.buy();
     this.scene.start('GameScene', { character, stage, difficulty, meta: this.meta });
   }

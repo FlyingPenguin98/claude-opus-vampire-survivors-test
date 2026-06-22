@@ -54,6 +54,17 @@ export class Spawner {
     this.bossActive = active;
   }
 
+  /** Which boss-schedule entries have already fired (for save/resume). */
+  getFired(): number[] {
+    return [...this.bossesFired];
+  }
+
+  /** Restore already-fired bosses (and skip the elite warm-up) on resume. */
+  restoreFired(indices: number[]): void {
+    this.bossesFired = new Set(indices);
+    this.eliteTimer = Spawner.ELITE_INTERVAL_MS;
+  }
+
   private currentWave(elapsed: number): WaveDef {
     const waves = this.stage.waves;
     let wave = waves[0];

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME, VERSION } from '../config/GameConfig';
 import { MetaState } from '../state/MetaState';
+import { SaveState } from '../state/SaveState';
 import { AudioSystem } from '../systems/AudioSystem';
 
 interface MenuItem {
@@ -56,16 +57,20 @@ export class TitleScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     // --- Menu ---
-    this.items = [
+    this.items = [];
+    if (SaveState.has()) {
+      this.items.push({ label: 'CONTINUE', color: '#ffd23a', size: 26, action: () => this.scene.start('GameScene', { resume: true }) });
+    }
+    this.items.push(
       { label: 'BEGIN', color: '#46d873', size: 26, action: () => this.start() },
       { label: 'Powerups', color: '#f2c14e', size: 20, action: () => this.scene.start('ShopScene') },
       { label: 'Codex', color: '#f0b870', size: 20, action: () => this.scene.start('CodexScene') },
       { label: 'Achievements', color: '#cf9aff', size: 20, action: () => this.scene.start('AchievementsScene') },
       { label: 'Stats', color: '#8af0c0', size: 20, action: () => this.scene.start('StatsScene') },
-      { label: 'Settings', color: '#6ad8ff', size: 20, action: () => this.scene.start('SettingsScene', { from: 'title' }) },
-    ];
-    const baseY = height * 0.46;
-    const gap = 33;
+      { label: 'Settings', color: '#6ad8ff', size: 20, action: () => this.scene.start('SettingsScene', { from: 'title' }) }
+    );
+    const gap = 32;
+    const baseY = height * 0.45 - (this.items.length - 6) * gap * 0.5;
     this.items.forEach((item, i) => {
       const t = this.add
         .text(width / 2, baseY + i * gap, item.label, {
